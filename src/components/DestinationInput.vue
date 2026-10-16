@@ -1,5 +1,5 @@
 <script setup>
-import { MapPin, Search } from '@lucide/vue'
+import { Search } from '@lucide/vue'
 
 defineProps({
   destinations: { type: Array, required: true },
@@ -15,7 +15,6 @@ const emit = defineEmits(['update:modelValue'])
   <div class="destination-input">
     <label class="field-label" :for="inputId">{{ label }}</label>
     <div class="select-wrap">
-
       <select
         :id="inputId"
         :value="modelValue"
