@@ -54,6 +54,7 @@ const selectedOriginId = ref('gate')
 const selectedDestinationId = ref('library')
 const selectedSegmentId = ref(buildRoute('gate', 'library').segments[0].properties.id)
 const isReportOpen = ref(false)
+const selectedReport = ref(null)
 const notice = ref('')
 const activeNav = ref('Explore')
 const currentYear = new Date().getFullYear()
@@ -119,6 +120,7 @@ watch(reports, (value) => {
 }, { deep: true })
 
 onMounted(async () => {
+  window.addEventListener('keydown', handleGlobalKeydown)
   if (supabaseConfigError) {
     showNotice(supabaseConfigError)
     return
@@ -175,8 +177,13 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  window.removeEventListener('keydown', handleGlobalKeydown)
   if (realtimeChannel && supabase) supabase.removeChannel(realtimeChannel)
 })
+
+function handleGlobalKeydown(event) {
+  if (event.key === 'Escape' && selectedReport.value) selectedReport.value = null
+}
 
 function showNotice(message) {
   notice.value = message
@@ -213,6 +220,10 @@ function submitReport(report) {
 function formatDate(value) {
   const date = new Date(value)
   return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(date)
+}
+
+function getReportOrigin(report) {
+  return locations.find((location) => report.routeId?.startsWith(`${location.id}-`))?.name || 'Unknown start location'
 }
 
 function setNav(item) {
@@ -330,7 +341,17 @@ function setNav(item) {
         </div>
 
         <div v-if="recentReports.length" class="updates-list">
-          <article v-for="report in recentReports" :key="report.id" class="update-item">
+          <article
+            v-for="report in recentReports"
+            :key="report.id"
+            class="update-item"
+            role="button"
+            tabindex="0"
+            :aria-label="`View route update: ${report.reason}`"
+            @click="selectedReport = report"
+            @keydown.enter.prevent="selectedReport = report"
+            @keydown.space.prevent="selectedReport = report"
+          >
             <div class="update-rating" :class="`update-rating--${report.rating.toLowerCase()}`">{{ report.rating === 'Good' ? '😊' : report.rating === 'Bad' ? '😕' : '😐' }}</div>
             <div class="update-main">
               <div class="update-topline"><strong>{{ report.segmentName }}</strong><span class="update-route">{{ report.routeName }}</span></div>
@@ -356,6 +377,38 @@ function setNav(item) {
     </Transition>
     <Transition name="preline-overlay">
       <ReportForm v-if="isReportOpen" :route="route" @close="isReportOpen = false" @submit="submitReport" />
+    </Transition>
+    <Transition name="preline-overlay">
+      <div v-if="selectedReport" class="dialog-backdrop update-detail-backdrop" @click.self="selectedReport = null">
+        <section class="report-dialog update-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="update-detail-title">
+          <div class="dialog-heading update-detail-heading">
+            <div class="dialog-icon"><MessageSquareText :size="19" /></div>
+            <button class="icon-button" type="button" aria-label="Close route update details" @click="selectedReport = null"><X :size="19" /></button>
+            <p class="eyebrow">CAMPUS COMMUNITY</p>
+            <h2 id="update-detail-title">Route update</h2>
+            <p class="dialog-subtitle">{{ selectedReport.segmentName }} · {{ selectedReport.rating }}</p>
+          </div>
+          <div class="update-detail-content">
+            <div class="update-detail-photo">
+              <img v-if="selectedReport.photoData" :src="selectedReport.photoData" :alt="selectedReport.photoName || 'Photo attached to this route update'" />
+              <p v-else>No photo was attached to this update.</p>
+            </div>
+            <div class="update-detail-route">
+              <div><span>START LOCATION</span><strong>{{ getReportOrigin(selectedReport) }}</strong></div>
+              <ArrowRight class="update-detail-arrow" :size="18" />
+              <div><span>DESTINATION</span><strong>{{ selectedReport.routeName }}</strong></div>
+            </div>
+            <div class="update-detail-field">
+              <span>ISSUE</span>
+              <p>{{ selectedReport.reason }}</p>
+            </div>
+            <div class="update-detail-field update-detail-time">
+              <span>TIME REPORTED</span>
+              <p><Clock3 :size="16" />{{ formatDate(selectedReport.createdAt) }}</p>
+            </div>
+          </div>
+        </section>
+      </div>
     </Transition>
   </div>
 </template>
