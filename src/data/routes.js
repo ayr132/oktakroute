@@ -2,7 +2,7 @@
 // between any two places is the path through the network.
 
 export const locations = [
-  { id: 'gate', name: 'North Campus Gate', category: 'Entrance' },
+  { id: 'gate', name: 'Gombak Campus Gate', category: 'Entrance' },
   { id: 'library', name: 'Central Library', category: 'Study spaces' },
   { id: 'cafe', name: 'Garden Café', category: 'Food & drink' },
   { id: 'lecture', name: 'Lecture Hall', category: 'Classrooms' },

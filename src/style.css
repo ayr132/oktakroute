@@ -1,15 +1,8 @@
 @import url("https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 
-/* Preline UI */
-@source "./node_modules/preline/dist/*.js";
-@import "./node_modules/preline/variants.css";
-
-/* Plugins */
-@plugin "@tailwindcss/forms";
-
-/* Preline Themes */
-@import "./themes/theme.css";
+@source "../node_modules/preline/dist/*.js";
+@import "../node_modules/preline/variants.css";
 
 @theme {
   --font-sans: "DM Sans", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
@@ -490,6 +483,12 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   box-shadow: 0 1px 3px rgb(16 24 40 / 8%), 0 1px 2px rgb(16 24 40 / 4%);
   transition: box-shadow 160ms ease;
 }
+.planner-card, .maintenance-card, .map-card, .updates-section, .decision-card,
+.report-cta, .condition-button, .map-controls button, .rating-options button,
+.upload-area, .button, .icon-button, .top-navigation button, .help-button {
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
 .planner-card:hover, .maintenance-card:hover, .map-card:hover, .updates-section:hover {
   box-shadow: 0 4px 8px -2px rgb(16 24 40 / 10%), 0 2px 4px -2px rgb(16 24 40 / 6%);
 }
@@ -530,6 +529,27 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   background: #f1f2ff;
   color: #5145a8;
   box-shadow: 0 0 0 1px #e0e2ff inset;
+}
+
+.preline-overlay-enter-active, .preline-overlay-leave-active {
+  transition: opacity 200ms cubic-bezier(0.2, 0, 0, 1);
+}
+.preline-overlay-enter-active .report-dialog,
+.preline-overlay-leave-active .report-dialog {
+  transition: opacity 200ms cubic-bezier(0.2, 0, 0, 1), transform 200ms cubic-bezier(0.2, 0, 0, 1);
+}
+.preline-overlay-enter-from, .preline-overlay-leave-to { opacity: 0; }
+.preline-overlay-enter-from .report-dialog,
+.preline-overlay-leave-to .report-dialog {
+  opacity: 0;
+  transform: translateY(8px) scale(0.98);
+}
+.preline-toast-enter-active, .preline-toast-leave-active {
+  transition: opacity 180ms cubic-bezier(0.2, 0, 0, 1), transform 180ms cubic-bezier(0.2, 0, 0, 1);
+}
+.preline-toast-enter-from, .preline-toast-leave-to {
+  opacity: 0;
+  transform: translateY(8px);
 }
 
 @media (min-width: 768px) {

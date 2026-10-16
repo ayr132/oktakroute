@@ -111,7 +111,7 @@ onBeforeUnmount(() => {
 <template>
   <div class="map-shell">
     <div ref="mapElement" class="leaflet-map" role="img" :aria-label="`Map showing route to ${route.destination}`"></div>
-    <div class="map-label map-label--campus"><span></span> NORTH CAMPUS</div>
+    <div class="map-label map-label--campus"><span></span> GOMBAK CAMPUS</div>
     <div class="map-controls" aria-label="Map controls">
       <button type="button" aria-label="Zoom in" @click="zoomIn"><Plus :size="18" /></button>
       <button type="button" aria-label="Zoom out" @click="zoomOut"><Minus :size="18" /></button>

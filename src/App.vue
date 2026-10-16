@@ -246,7 +246,7 @@ function setNav(item) {
           <h1>Every path should <span>lead somewhere.</span></h1>
           <p class="welcome-copy">Find a step-free route and get there with a little more confidence.</p>
         </div>
-        <div class="campus-chip"><span class="campus-chip-icon"><Map :size="17" /></span><span><small>YOUR CAMPUS</small><strong>North Campus</strong></span><ChevronRight :size="16" /></div>
+        <div class="campus-chip"><span class="campus-chip-icon"><Map :size="17" /></span><span><small>YOUR CAMPUS</small><strong>Gombak Campus</strong></span><ChevronRight :size="16" /></div>
       </section>
 
       <div class="workspace-grid">
@@ -351,7 +351,11 @@ function setNav(item) {
       <footer class="page-footer"><span>© {{ currentYear }} OkTakRoute</span><span>Built for a campus where everyone belongs <span class="footer-heart">♥</span></span><span><ShieldCheck :size="14" /> Accessibility first</span></footer>
     </main>
 
-    <div v-if="notice" class="toast" role="status"><Check :size="16" />{{ notice }}<button type="button" aria-label="Dismiss notification" @click="notice = ''"><X :size="15" /></button></div>
-    <ReportForm v-if="isReportOpen" :route="route" @close="isReportOpen = false" @submit="submitReport" />
+    <Transition name="preline-toast">
+      <div v-if="notice" class="toast" role="status"><Check :size="16" />{{ notice }}<button type="button" aria-label="Dismiss notification" @click="notice = ''"><X :size="15" /></button></div>
+    </Transition>
+    <Transition name="preline-overlay">
+      <ReportForm v-if="isReportOpen" :route="route" @close="isReportOpen = false" @submit="submitReport" />
+    </Transition>
   </div>
 </template>
