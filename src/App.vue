@@ -252,7 +252,7 @@ function setNav(item) {
 
     <main class="page-content">
       <section class="welcome-row">
-        <div align-items="center">
+        <div class="welcome-copy-group">
           <div class="welcome-kicker"><span class="live-indicator"></span> YOUR CAMPUS, MADE ACCESSIBLE</div>
           <h1>Every path should <span>lead somewhere.</span></h1>
           <p class="welcome-copy">Find a step-free route and get there with a little more confidence.</p>
