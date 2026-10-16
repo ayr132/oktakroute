@@ -1,14 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
-
-/* Preline UI */
-@source "./node_modules/preline/dist/*.js";
-@import "./node_modules/preline/variants.css";
-
-/* Plugins */
-@plugin "@tailwindcss/forms";
-
-/* Preline Themes */
-@import "./themes/theme.css";
 
 @theme {
   --font-sans: "DM Sans", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
@@ -47,7 +38,7 @@ body { min-width: 340px; min-height: 100vh; margin: 0; }
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
-  outline: 3px solid rgb(28 132 104 / 34%);
+  outline: 3px solid rgba(8, 62, 240, 0.34);
   outline-offset: 3px;
 }
 ::selection { background: #cce7d8; color: #173e32; }
@@ -443,100 +434,94 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 
 :root {
-  --ui-primary: #7c3aed;
-  --ui-primary-hover: #6d28d9;
-  --ui-primary-50: #f5f3ff;
-  --ui-primary-100: #ede9fe;
-  --ui-gray-50: #f9fafb;
-  --ui-gray-100: #f3f4f6;
-  --ui-gray-200: #e5e7eb;
-  --ui-gray-500: #6b7280;
-  --ui-gray-700: #374151;
-  font-family: Inter, system-ui, sans-serif;
-  color: #111827;
-  background: #fff;
+  --ui-accent: var(--route-blue);
+  --ui-accent-hover: #2465a7;
+  --ui-accent-soft: #edf5fc;
+  --ui-canvas: #f9fafb;
+  --ui-border: #e4e7ec;
+  --ui-text: #101828;
+  --ui-muted: #667085;
+  font-family: Outfit, "Segoe UI", sans-serif;
+  color: var(--ui-text);
+  background: var(--ui-canvas);
 }
 
-body { background: #fff; color: #111827; }
+body { background: var(--ui-canvas); color: var(--ui-text); }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
-  outline-color: #8b5cf6;
+  outline: 4px solid rgb(45 119 196 / 16%);
 }
-::selection { background: #ede9fe; color: #4c1d95; }
+::selection { background: #dcecff; color: #173f68; }
 
 .topbar {
-  padding-inline: max(calc((100vw - 1024px) / 2), 16px);
-  border-bottom-color: var(--ui-gray-200);
-  background: rgb(255 255 255 / 92%);
+  border-bottom-color: var(--ui-border);
+  background: rgb(255 255 255 / 94%);
 }
-.page-content { width: min(1024px, calc(100% - 32px)); }
 .brand, .welcome-row h1, .planner-card-top h2, .decision-heading h2,
 .section-title-row h3, .map-heading h2, .updates-title h2, .dialog-heading h2 {
-  font-family: Inter, system-ui, sans-serif;
+  font-family: Outfit, "Segoe UI", sans-serif;
 }
-.brand-name span { color: var(--ui-primary); }
-.top-navigation button.active, .top-navigation button:hover, .help-button:hover,
-.alternate-link, .alternate-link:hover, .map-feedback, .map-feedback:hover,
-.updates-link, .updates-link:hover, .empty-action {
-  color: var(--ui-primary);
+.brand-name span, .top-navigation button.active, .top-navigation button:hover,
+.help-button:hover, .alternate-link, .alternate-link:hover, .map-feedback,
+.map-feedback:hover, .updates-link, .updates-link:hover, .empty-action {
+  color: var(--ui-accent);
 }
-.top-navigation button.active::after { background: var(--ui-primary); }
-.nav-count { background: var(--ui-primary-50); color: var(--ui-primary); }
+.top-navigation button.active::after { background: var(--ui-accent); }
+.nav-count { background: var(--ui-accent-soft); color: var(--ui-accent); }
+
+.welcome-kicker { margin-bottom: 12px; color: var(--ui-accent); font-size: 11px; }
+.welcome-copy, .campus-chip, .map-heading p, .field-label { color: var(--ui-muted); }
+.welcome-row h1 { color: var(--ui-text); }
+.welcome-row h1 span { color: var(--ui-accent); }
 
 .planner-card, .maintenance-card, .map-card, .updates-section {
-  border-color: var(--ui-gray-200);
+  border-color: var(--ui-border);
   border-radius: 16px;
   background: #fff;
-  box-shadow: 0 4px 16px -4px rgb(0 0 0 / 10%);
-  transition: box-shadow 180ms ease;
+  box-shadow: 0 1px 3px rgb(16 24 40 / 8%), 0 1px 2px rgb(16 24 40 / 4%);
+  transition: box-shadow 160ms ease;
 }
 .planner-card:hover, .maintenance-card:hover, .map-card:hover, .updates-section:hover {
-  box-shadow: 0 12px 32px -8px rgb(0 0 0 / 14%);
+  box-shadow: 0 4px 8px -2px rgb(16 24 40 / 10%), 0 2px 4px -2px rgb(16 24 40 / 6%);
 }
-.planner-card { padding: 24px; }
+.planner-card { padding: 20px; }
 .decision-card {
-  border-color: var(--ui-gray-200);
-  border-radius: 16px;
+  border-color: var(--ui-border);
+  border-radius: 12px;
   background: #fff;
 }
-.origin-destination, .route-summary, .form-route { background: var(--ui-gray-50); }
-.origin-destination, .decision-card, .route-summary, .form-route { border-color: var(--ui-gray-200); }
-.route-qualities > div { background: var(--ui-gray-50); }
-.map-shell { border-color: var(--ui-gray-200); }
+.origin-destination, .route-summary, .form-route { background: var(--ui-canvas); }
+.origin-destination, .decision-card, .route-summary, .form-route { border-color: var(--ui-border); }
+.route-qualities > div { background: var(--ui-canvas); }
+.planner-title-icon, .map-heading-icon, .dialog-icon, .upload-icon {
+  background: var(--ui-accent-soft);
+  color: var(--ui-accent);
+}
+.map-shell { border-color: var(--ui-border); }
 .updates-section { margin-top: 24px; }
 .report-dialog {
-  border-color: var(--ui-gray-200);
+  border-color: var(--ui-border);
   border-radius: 16px;
-  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 25%);
+  box-shadow: 0 20px 24px -4px rgb(16 24 40 / 8%), 0 8px 8px -4px rgb(16 24 40 / 3%);
 }
 .button--primary {
-  background: var(--ui-primary);
-  box-shadow: 0 10px 15px -3px rgb(124 58 237 / 25%), 0 4px 6px -4px rgb(124 58 237 / 25%);
+  background: var(--ui-accent);
+  box-shadow: 0 1px 3px rgb(16 24 40 / 10%);
 }
-.button--primary:hover:not(:disabled) {
-  background: var(--ui-primary-hover);
-  box-shadow: 0 20px 25px -5px rgb(124 58 237 / 30%), 0 8px 10px -6px rgb(124 58 237 / 30%);
-}
-.button--quiet {
-  border-color: #d1d5db;
-  color: var(--ui-gray-700);
-}
-.button--quiet:hover { background: var(--ui-gray-50); }
-.report-form textarea, .select-wrap select { border-color: #d1d5db; }
+.button--primary:hover:not(:disabled) { background: var(--ui-accent-hover); }
+.button--quiet { border-color: #d0d5dd; color: #344054; }
+.button--quiet:hover { background: #f2f4f7; }
+.report-form textarea, .select-wrap select { border-color: #d0d5dd; }
 .report-form textarea:focus, .report-form select:focus {
-  border-color: #8b5cf6;
-  outline-color: rgb(139 92 246 / 20%);
+  border-color: var(--ui-accent);
+  outline-color: rgb(45 119 196 / 16%);
 }
 .rating-options button.selected {
-  border-color: #c4b5fd;
-  background: var(--ui-primary-50);
-  color: var(--ui-primary-hover);
-  box-shadow: 0 0 0 1px #ddd6fe inset;
+  border-color: var(--route-periwinkle);
+  background: #f1f2ff;
+  color: #5145a8;
+  box-shadow: 0 0 0 1px #e0e2ff inset;
 }
 
-@media (max-width: 900px) {
-  .topbar { padding-inline: 22px; }
-}
-@media (max-width: 680px) {
-  .topbar { padding-inline: 16px; }
-  .page-content { width: calc(100% - 30px); }
+@media (min-width: 768px) {
+  .planner-card { padding: 24px; }
 }
