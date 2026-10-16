@@ -9,75 +9,58 @@ export const supabaseConfigError = Boolean(url) !== Boolean(anonKey)
 
 export const supabase = url && anonKey ? createClient(url, anonKey) : null
 
-function mapReport(row) {
+const COLUMNS = 'id,path_id,type,description,status,reported_at,expires_at,resolved_at,reported_by,verification,confirmations,photos'
+
+function fromRow(row) {
   return {
     id: row.id,
-    routeId: row.route_id,
-    routeName: row.route_name,
-    segmentId: row.segment_id,
-    segmentName: row.segment_name,
-    rating: row.rating,
-    reason: row.reason,
-    photoName: row.photo_name || '',
-    photoData: row.photo_data || '',
-    createdAt: row.created_at,
-    location: row.location,
+    pathId: row.path_id,
+    type: row.type,
+    description: row.description,
+    status: row.status,
+    reportedAt: row.reported_at,
+    expiresAt: row.expires_at,
+    resolvedAt: row.resolved_at,
+    reportedBy: row.reported_by,
+    verification: row.verification,
+    confirmations: row.confirmations,
+    photos: row.photos || [],
   }
 }
 
-export async function fetchStatuses() {
-  const { data, error } = await supabase.from('route_segment_statuses').select('segment_id,status,reason,updated_at')
-  if (error) throw error
-  return data
-}
-
-export async function saveStatus(segmentId, status, reason = '') {
-  const { error } = await supabase.from('route_segment_statuses').upsert({
-    segment_id: segmentId,
-    status,
-    reason,
-    updated_at: new Date().toISOString(),
-  })
-  if (error) throw error
+function toRow(report) {
+  return {
+    id: report.id,
+    path_id: report.pathId,
+    type: report.type,
+    description: report.description,
+    status: report.status,
+    reported_at: report.reportedAt,
+    expires_at: report.expiresAt,
+    resolved_at: report.resolvedAt,
+    reported_by: report.reportedBy,
+    verification: report.verification,
+    confirmations: report.confirmations,
+    photos: report.photos,
+  }
 }
 
 export async function fetchReports() {
-  const { data, error } = await supabase
-    .from('route_reports')
-    .select('id,route_id,route_name,segment_id,segment_name,rating,reason,photo_name,photo_data,created_at,location')
-    .order('created_at', { ascending: false })
-    .limit(30)
+  const { data, error } = await supabase.from('path_reports').select(COLUMNS).order('reported_at', { ascending: false }).limit(200)
   if (error) throw error
-  return data.map(mapReport)
+  return data.map(fromRow)
 }
 
 export async function saveReport(report) {
-  const { error } = await supabase.from('route_reports').insert({
-    id: report.id,
-    route_id: report.routeId,
-    route_name: report.routeName,
-    segment_id: report.segmentId,
-    segment_name: report.segmentName,
-    rating: report.rating,
-    reason: report.reason,
-    photo_name: report.photoName,
-    photo_data: report.photoData,
-    created_at: report.createdAt,
-    location: report.location,
-  })
+  const { error } = await supabase.from('path_reports').upsert(toRow(report))
   if (error) throw error
 }
 
-export function subscribeToOkTakRoute(onStatusChange, onReport, onConnectionChange) {
+export function subscribeToReports(onReport, onConnectionChange) {
   return supabase
     .channel('oktakroute-live')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'route_segment_statuses' }, (payload) => {
-      onStatusChange(payload)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'path_reports' }, (payload) => {
+      if (payload.eventType !== 'DELETE') onReport(fromRow(payload.new))
     })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'route_reports' }, (payload) => {
-      onReport(mapReport(payload.new))
-    })
-    .subscribe((status, error) => {
-      onConnectionChange(status, error)
-    })
+    .subscribe((status, error) => onConnectionChange(status, error))
 }
