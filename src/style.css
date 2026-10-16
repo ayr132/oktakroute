@@ -1,6 +1,16 @@
 @import url("https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 
+/* Preline UI */
+@source "./node_modules/preline/dist/*.js";
+@import "./node_modules/preline/variants.css";
+
+/* Plugins */
+@plugin "@tailwindcss/forms";
+
+/* Preline Themes */
+@import "./themes/theme.css";
+
 @theme {
   --font-sans: "DM Sans", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
   --color-route-blue: #2d77c4;

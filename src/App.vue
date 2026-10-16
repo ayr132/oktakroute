@@ -24,7 +24,7 @@ import MapView from './components/MapView.vue'
 import MaintenanceStatus from './components/MaintenanceStatus.vue'
 import ReportForm from './components/ReportForm.vue'
 import RouteDecision from './components/RouteDecision.vue'
-import { initialSegmentStatuses, routes } from './data/routes'
+import { buildRoute, initialSegmentStatuses, locations } from './data/routes'
 import {
   fetchReports,
   fetchStatuses,
@@ -50,21 +50,28 @@ const segmentStatuses = ref({ ...initialSegmentStatuses, ...savedStatuses })
 const statusReasons = ref(readStored('oktakroute-status-reasons', {}))
 const storedReports = readStored('oktakroute-reports', [])
 const reports = ref(Array.isArray(storedReports) ? storedReports : [])
-const selectedRouteId = ref(routes[0].id)
-const selectedSegmentId = ref(routes[0].segments[0].properties.id)
+const selectedOriginId = ref('gate')
+const selectedDestinationId = ref('library')
+const selectedSegmentId = ref(buildRoute('gate', 'library').segments[0].properties.id)
 const isReportOpen = ref(false)
 const notice = ref('')
 const activeNav = ref('Explore')
 const currentYear = new Date().getFullYear()
 let realtimeChannel
 
-const route = computed(() => routes.find((item) => item.id === selectedRouteId.value) || routes[0])
+const originOptions = computed(() => locations.map((item) => ({ id: item.id, destination: item.name })))
+const destinationOptions = computed(() => originOptions.value.filter((item) => item.id !== selectedOriginId.value))
+const route = computed(() => buildRoute(selectedOriginId.value, selectedDestinationId.value))
+const isBlocked = (item) => item.segments.some((segment) => ['maintenance', 'closed'].includes(segmentStatuses.value[segment.properties.id]))
 const routeStatus = computed(() => {
   if (!route.value.accessible) return 'inaccessible'
   if (route.value.segments.some((segment) => ['maintenance', 'closed'].includes(segmentStatuses.value[segment.properties.id]))) return 'maintenance'
   return 'open'
 })
-const alternateRoute = computed(() => routes.find((item) => item.id !== route.value.id && item.accessible && !item.segments.some((segment) => ['maintenance', 'closed'].includes(segmentStatuses.value[segment.properties.id]))) || null)
+const alternateRoute = computed(() => locations
+  .filter((item) => item.id !== selectedOriginId.value && item.id !== selectedDestinationId.value)
+  .map((item) => buildRoute(selectedOriginId.value, item.id))
+  .find((item) => item && item.accessible && !isBlocked(item)) || null)
 const statusReason = computed(() => {
   const problemSegment = route.value.segments.find((segment) => ['maintenance', 'closed'].includes(segmentStatuses.value[segment.properties.id]))
   return problemSegment
@@ -73,9 +80,14 @@ const statusReason = computed(() => {
 })
 const recentReports = computed(() => reports.value.slice(0, 3))
 
-watch(selectedRouteId, (id) => {
-  const nextRoute = routes.find((item) => item.id === id)
-  selectedSegmentId.value = nextRoute?.segments[0].properties.id || ''
+watch(selectedOriginId, (id) => {
+  if (id === selectedDestinationId.value) {
+    selectedDestinationId.value = locations.find((item) => item.id !== id).id
+  }
+})
+
+watch(() => route.value.id, () => {
+  selectedSegmentId.value = route.value.segments[0].properties.id
 })
 
 watch(segmentStatuses, (value) => {
@@ -245,13 +257,12 @@ function setNav(item) {
             <div class="origin-destination">
               <div class="origin-row">
                 <span class="location-marker location-marker--origin"><span></span></span>
-                <span><small>STARTING FROM</small><strong>North Campus Gate</strong></span>
-                <span class="you-badge">YOU</span>
+                <DestinationInput :destinations="originOptions" v-model="selectedOriginId" label="Where are you starting from?" input-id="origin" />
               </div>
               <div class="route-connector"><span></span></div>
               <div class="destination-row">
                 <span class="location-marker location-marker--destination"><span></span></span>
-                <DestinationInput :destinations="routes" v-model="selectedRouteId" />
+                <DestinationInput :destinations="destinationOptions" v-model="selectedDestinationId" />
               </div>
             </div>
             <RouteDecision
@@ -259,7 +270,7 @@ function setNav(item) {
               :status="routeStatus"
               :reason="statusReason"
               :alternate="alternateRoute"
-              @select-alternate="selectedRouteId = $event"
+              @select-alternate="selectedDestinationId = $event"
             />
             <div class="planner-trust"><ShieldCheck :size="15" /><span>Routes are checked by our campus community</span><Sparkles :size="14" /></div>
           </section>
@@ -285,14 +296,14 @@ function setNav(item) {
             <div class="map-card-header">
               <div class="map-heading">
                 <div class="map-heading-icon"><Map :size="18" /></div>
-                <div><h2>Your route</h2><p>North Campus <span>·</span> {{ route.destination }}</p></div>
+                <div><h2>Your route</h2><p>{{ route.origin }} <span>·</span> {{ route.destination }}</p></div>
               </div>
               <div class="live-pill"><span></span> LIVE STATUS</div>
             </div>
             <MapView :route="route" :statuses="segmentStatuses" :status="routeStatus" />
             <div class="map-card-footer">
               <div class="route-endpoints">
-                <span class="endpoint-dot"></span><span>Campus Gate</span>
+                <span class="endpoint-dot"></span><span>{{ route.origin }}</span>
                 <ArrowRight class="endpoint-arrow" :size="14" />
                 <span class="endpoint-dot endpoint-dot--end" :class="{ 'endpoint-dot--closed': routeStatus !== 'open' }"></span>
                 <strong>{{ route.destination }}</strong>

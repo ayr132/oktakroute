@@ -4,6 +4,8 @@ import { MapPin, Search } from '@lucide/vue'
 defineProps({
   destinations: { type: Array, required: true },
   modelValue: { type: String, required: true },
+  label: { type: String, default: 'Where would you like to go?' },
+  inputId: { type: String, default: 'destination' },
 })
 
 const emit = defineEmits(['update:modelValue'])
@@ -11,11 +13,11 @@ const emit = defineEmits(['update:modelValue'])
 
 <template>
   <div class="destination-input">
-    <label class="field-label" for="destination">Where would you like to go?</label>
+    <label class="field-label" :for="inputId">{{ label }}</label>
     <div class="select-wrap">
 
       <select
-        id="destination"
+        :id="inputId"
         :value="modelValue"
         @change="emit('update:modelValue', $event.target.value)"
       >

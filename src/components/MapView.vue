@@ -59,7 +59,7 @@ function drawRoute() {
     weight: 3,
     fillColor: '#2d77c4',
     fillOpacity: 1,
-  }).bindTooltip('Campus gate', { direction: 'top', offset: [0, -8] }).addTo(markersLayer)
+  }).bindTooltip(props.route.origin, { direction: 'top', offset: [0, -8] }).addTo(markersLayer)
 
   L.circleMarker(end, {
     radius: 8,

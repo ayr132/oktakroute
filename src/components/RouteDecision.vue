@@ -60,7 +60,7 @@ defineEmits(['select-alternate'])
       v-if="status !== 'open' && alternate"
       class="alternate-link"
       type="button"
-      @click="$emit('select-alternate', alternate.id)"
+      @click="$emit('select-alternate', alternate.destinationId)"
     >
       Try {{ alternate.destination }} instead <ArrowRight :size="16" />
     </button>
