@@ -61,7 +61,7 @@ let realtimeChannel
 
 const originOptions = computed(() => locations.map((item) => ({ id: item.id, destination: item.name })))
 const destinationOptions = computed(() => originOptions.value.filter((item) => item.id !== selectedOriginId.value))
-const route = computed(() => buildRoute(selectedOriginId.value, selectedDestinationId.value))
+const route = computed(() => buildRoute(selectedOriginId.value, selectedDestinationId.value, segmentStatuses.value))
 const isBlocked = (item) => item.segments.some((segment) => ['maintenance', 'closed'].includes(segmentStatuses.value[segment.properties.id]))
 const routeStatus = computed(() => {
   if (!route.value.accessible) return 'inaccessible'
@@ -70,7 +70,7 @@ const routeStatus = computed(() => {
 })
 const alternateRoute = computed(() => locations
   .filter((item) => item.id !== selectedOriginId.value && item.id !== selectedDestinationId.value)
-  .map((item) => buildRoute(selectedOriginId.value, item.id))
+  .map((item) => buildRoute(selectedOriginId.value, item.id, segmentStatuses.value))
   .find((item) => item && item.accessible && !isBlocked(item)) || null)
 const statusReason = computed(() => {
   const problemSegment = route.value.segments.find((segment) => ['maintenance', 'closed'].includes(segmentStatuses.value[segment.properties.id]))
@@ -86,8 +86,10 @@ watch(selectedOriginId, (id) => {
   }
 })
 
-watch(() => route.value.id, () => {
-  selectedSegmentId.value = route.value.segments[0].properties.id
+watch(() => route.value.segments.map((item) => item.properties.id).join(), () => {
+  if (!route.value.segments.some((item) => item.properties.id === selectedSegmentId.value)) {
+    selectedSegmentId.value = route.value.segments[0].properties.id
+  }
 })
 
 watch(segmentStatuses, (value) => {

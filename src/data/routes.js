@@ -7,6 +7,8 @@ export const locations = [
   { id: 'cafe', name: 'Garden Café', category: 'Food & drink' },
   { id: 'lecture', name: 'Lecture Hall', category: 'Classrooms' },
   { id: 'admin', name: 'Administration Block', category: 'Campus services' },
+  { id: 'student-centre', name: 'Student Centre', category: 'Campus services' },
+  { id: 'hostel', name: 'Residential Hostel', category: 'Housing' },
 ]
 
 const segment = (from, to, id, name, status, coordinates, extra = {}) => ({
@@ -41,6 +43,15 @@ const edges = [
   segment('gate', 'admin', 'admin-steps', 'North entrance steps', 'closed', [
     [101.735, 3.2501], [101.73475, 3.25055], [101.73455, 3.25095],
   ], { reason: 'Steep stairs — no ramp', stepFree: false, incline: 'Steep' }),
+  segment('library-junction', 'student-centre', 'centre-walkway', 'Student Centre walkway', 'open', [
+    [101.736, 3.25065], [101.7364, 3.25048], [101.7368, 3.2503],
+  ]),
+  segment('student-centre', 'hostel', 'hostel-path', 'Hostel connector path', 'open', [
+    [101.7368, 3.2503], [101.737, 3.25012], [101.7372, 3.2499],
+  ]),
+  segment('cafe-junction', 'hostel', 'hostel-shortcut', 'Café to hostel path', 'open', [
+    [101.7357, 3.2497], [101.73645, 3.24965], [101.7372, 3.2499],
+  ]),
 ]
 
 export const initialSegmentStatuses = Object.fromEntries(
@@ -55,26 +66,6 @@ for (const edge of edges) {
   adjacency.get(edge.to).push({ edge, next: edge.from, reversed: true })
 }
 
-// Breadth-first search; returns the segments in travel order, oriented from -> to.
-function findPath(fromId, toId) {
-  const visited = new Set([fromId])
-  const queue = [{ node: fromId, path: [] }]
-  while (queue.length) {
-    const { node, path } = queue.shift()
-    if (node === toId) return path
-    for (const { edge, next, reversed } of adjacency.get(node) || []) {
-      if (visited.has(next)) continue
-      visited.add(next)
-      const { feature } = edge
-      const oriented = reversed
-        ? { ...feature, geometry: { ...feature.geometry, coordinates: [...feature.geometry.coordinates].reverse() } }
-        : feature
-      queue.push({ node: next, path: [...path, oriented] })
-    }
-  }
-  return null
-}
-
 function metres([lng1, lat1], [lng2, lat2]) {
   const rad = Math.PI / 180
   const a = Math.sin(((lat2 - lat1) * rad) / 2) ** 2
@@ -87,10 +78,45 @@ function segmentLength(feature) {
   return points.slice(1).reduce((sum, point, index) => sum + metres(points[index], point), 0)
 }
 
-export function buildRoute(originId, destinationId) {
+// Dijkstra by walking distance. Closed or maintenance segments carry a large
+// penalty, so a clear detour is preferred whenever one exists.
+const BLOCKED_PENALTY = 100000
+
+function findPath(fromId, toId, statuses) {
+  const cost = new Map([[fromId, 0]])
+  const previous = new Map()
+  const pending = new Set([fromId])
+  while (pending.size) {
+    const node = [...pending].reduce((best, id) => (cost.get(id) < cost.get(best) ? id : best))
+    pending.delete(node)
+    if (node === toId) break
+    for (const { edge, next, reversed } of adjacency.get(node) || []) {
+      const { feature } = edge
+      const status = statuses[feature.properties.id] || feature.properties.status
+      const step = segmentLength(feature) + (status === 'open' ? 0 : BLOCKED_PENALTY)
+      if (cost.has(next) && cost.get(next) <= cost.get(node) + step) continue
+      cost.set(next, cost.get(node) + step)
+      previous.set(next, { node, feature, reversed })
+      pending.add(next)
+    }
+  }
+  if (!previous.has(toId)) return null
+
+  const path = []
+  for (let node = toId; node !== fromId;) {
+    const { node: before, feature, reversed } = previous.get(node)
+    path.unshift(reversed
+      ? { ...feature, geometry: { ...feature.geometry, coordinates: [...feature.geometry.coordinates].reverse() } }
+      : feature)
+    node = before
+  }
+  return path
+}
+
+export function buildRoute(originId, destinationId, statuses = {}) {
   const origin = locations.find((item) => item.id === originId)
   const destination = locations.find((item) => item.id === destinationId)
-  const segments = originId !== destinationId ? findPath(originId, destinationId) : null
+  const segments = originId !== destinationId ? findPath(originId, destinationId, statuses) : null
   if (!origin || !destination || !segments) return null
 
   const blocked = segments.find((item) => !item.properties.stepFree)
