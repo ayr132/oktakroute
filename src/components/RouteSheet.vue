@@ -1,12 +1,37 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { CircleAlert, GitBranch, ShieldCheck } from '@lucide/vue'
+import { REPORT_TYPES } from '../data/reportTypes'
 
 const props = defineProps({
   plan: { type: Object, required: true },
 })
 
 const route = computed(() => props.plan.route)
+const showReasons = ref(false)
+const canExplain = computed(() => ['blocked', 'not-step-free'].includes(props.plan.status))
+const reasonDetails = computed(() => {
+  if (props.plan.status === 'blocked') {
+    return props.plan.blockedPaths.map(({ path, reports }) => {
+      const reasons = reports.map((report) => {
+        const label = REPORT_TYPES[report.type]?.label || 'Active report'
+        return report.description ? `${label}: ${report.description}` : label
+      })
+      return `${path.name}: ${reasons.join('; ') || path.unavailableReason || 'Unavailable'}`
+    })
+  }
+  if (props.plan.status === 'not-step-free') {
+    return props.plan.stairsPaths.map((path) => {
+      const reason = path.hasStairs
+        ? 'Has stairs'
+        : !path.wheelchairFriendly
+          ? 'Not wheelchair friendly'
+          : `Slope is too steep (${path.slope}%)`
+      return `${path.name}: ${reason}`
+    })
+  }
+  return []
+})
 
 const message = computed(() => {
   const { status, unmapped, blockedPaths } = props.plan
@@ -58,7 +83,20 @@ const details = computed(() => {
     <template v-else>
       <div class="sheet-alert">
         <CircleAlert :size="22" />
-        <div><strong>{{ message.title }}</strong><p>{{ message.body }}</p></div>
+        <div>
+          <strong>{{ message.title }}</strong>
+          <p>{{ message.body }}</p>
+          <a
+            v-if="canExplain"
+            class="why-link"
+            href="#route-reasons"
+            :aria-expanded="showReasons"
+            @click.prevent="showReasons = !showReasons"
+          >see why</a>
+          <ul v-if="showReasons" id="route-reasons" class="route-reasons">
+            <li v-for="reason in reasonDetails" :key="reason">{{ reason }}</li>
+          </ul>
+        </div>
       </div>
     </template>
   </section>

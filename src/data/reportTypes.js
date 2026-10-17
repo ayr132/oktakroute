@@ -11,6 +11,7 @@ export const REPORT_TYPES = {
   ramp: { label: 'Damaged / unavailable ramp', icon: '♿', effect: 'blocks-wheelchair' },
   stairs: { label: 'Stairs or unexpected steps', icon: '🪜', effect: 'blocks-wheelchair' },
   obstruction: { label: 'Obstruction', icon: '🌳', effect: 'blocks-all' },
+  vehicle: { label: 'Blocked by a vehicle', icon: '🚗', effect: 'blocks-all' },
   other: { label: 'Other', icon: '⚠️', effect: 'none' },
 };
 

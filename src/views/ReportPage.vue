@@ -16,7 +16,6 @@ const props = defineProps({
 const emit = defineEmits(['submit', 'cancel'])
 const pathId = ref(props.initialPathId)
 const chosenPath = computed(() => props.paths.find((path) => path.id === pathId.value))
-const routePathIds = computed(() => props.plan.route?.pathIds || [])
 const type = ref('')
 const description = ref('')
 const durationHours = ref(24)
@@ -25,8 +24,6 @@ const fileInput = ref(null)
 const error = ref('')
 const isPreparing = ref(false)
 
-const onRoute = computed(() => props.paths.filter((path) => routePathIds.value.includes(path.id)))
-const elsewhere = computed(() => props.paths.filter((path) => !routePathIds.value.includes(path.id)))
 const needsDescription = computed(() => type.value === 'other')
 const canSubmit = computed(() => Boolean(pathId.value && type.value) && (!needsDescription.value || description.value.trim().length > 0))
 
@@ -97,19 +94,26 @@ async function submit() {
             @select-path="pathId = $event"
           />
         </div>
-        <p class="picked-chip" :class="{ 'picked-chip--empty': !chosenPath }">
-          {{ chosenPath ? `${chosenPath.name} (${chosenPath.id})` : 'Tap a road on the map to select it' }}
-        </p>
-        <label class="sr-only" for="report-path">Or choose from the list</label>
-        <select id="report-path" v-model="pathId">
-          <option value="" disabled>Or choose from a list…</option>
-          <optgroup v-if="onRoute.length" label="On your route">
-            <option v-for="path in onRoute" :key="path.id" :value="path.id">{{ path.name }} ({{ path.id }})</option>
-          </optgroup>
-          <optgroup :label="onRoute.length ? 'Other paths' : 'All paths'">
-            <option v-for="path in elsewhere" :key="path.id" :value="path.id">{{ path.name }} ({{ path.id }})</option>
-          </optgroup>
-        </select>
+        <div class="report-context-row">
+          <p class="picked-chip" :class="{ 'picked-chip--empty': !chosenPath }">
+            {{ chosenPath ? `${chosenPath.name} (${chosenPath.id})` : 'Tap a road on the map to select it' }}
+          </p>
+          <aside class="authority-card" aria-label="Local authority for this area">
+            <div class="authority-copy">
+              <span>Local authority</span>
+              <a href="https://jkt.kpkt.gov.my/en/list-of-local-authorities/" target="_blank" rel="noopener noreferrer">
+                Majlis Perbandaran Selayang
+              </a>
+              <a href="tel:+60361265800">Office: +603-6126 5800</a>
+              <a href="https://www.google.com/maps/search/?api=1&query=Majlis+Perbandaran+Selayang%2C+Gombak%2C+Selangor" target="_blank" rel="noopener noreferrer">
+                Gombak, Selangor
+              </a>
+            </div>
+            <a class="authority-logo" href="https://www.mps.gov.my/" target="_blank" rel="noopener noreferrer" aria-label="Visit the official Majlis Perbandaran Selayang website">
+              <img src="https://www.mps.gov.my/sites/default/files/mps-logo.png" alt="Majlis Perbandaran Selayang logo" loading="lazy" />
+            </a>
+          </aside>
+        </div>
       </section>
 
       <fieldset class="form-step">
@@ -147,6 +151,15 @@ async function submit() {
 
       <p v-if="error" class="form-error" role="alert">{{ error }}</p>
 
+      <section v-if="type === 'vehicle'" class="form-step vehicle-report-section" aria-labelledby="vehicle-report-title">
+        <h2 id="vehicle-report-title" class="form-label">Report to an authority</h2>
+        <p>Choose an official complaint portal. Your OKtakRoute report is not sent to either agency automatically.</p>
+        <div class="agency-options">
+          <a href="https://jpj.spab.gov.my/eApps/sdmscasepool/SdmsCasePool/add.do" target="_blank" rel="noopener noreferrer">Report to JPJ</a>
+          <a href="https://rmp.spab.gov.my/eApps/sdmscasepool/SdmsCasePool/add.do" target="_blank" rel="noopener noreferrer">Report to PDRM</a>
+        </div>
+      </section>
+
       <div class="form-actions">
         <button type="button" class="btn btn--light" @click="emit('cancel')">Cancel</button>
         <button type="submit" class="btn btn--brand" :disabled="isPreparing">
@@ -155,5 +168,6 @@ async function submit() {
         </button>
       </div>
     </form>
+
   </div>
 </template>

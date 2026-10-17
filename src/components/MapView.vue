@@ -48,8 +48,23 @@ function popupContent(location) {
   root.append(title, sub)
   if (!location.connected) {
     const note = document.createElement('em')
-    note.textContent = 'Not on the walking network yet'
-    root.append(note)
+    note.textContent = 'Not on the walking path yet'
+    const whyLink = document.createElement('a')
+    whyLink.className = 'why-link'
+    whyLink.href = '#location-network-reason'
+    whyLink.textContent = 'see why'
+    whyLink.setAttribute('aria-expanded', 'false')
+    const reason = document.createElement('span')
+    reason.id = 'location-network-reason'
+    reason.className = 'loc-popup-reason'
+    reason.hidden = true
+    reason.textContent = 'This location is not connected to a mapped walking path, so a step-free route cannot be planned to or from it yet.'
+    whyLink.addEventListener('click', (event) => {
+      event.preventDefault()
+      reason.hidden = !reason.hidden
+      whyLink.setAttribute('aria-expanded', String(!reason.hidden))
+    })
+    root.append(note, whyLink, reason)
     return root
   }
   const actions = document.createElement('div')
