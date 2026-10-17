@@ -420,3 +420,4 @@ ul { padding: 0; list-style: none; }
 .pop-enter-from .profile-backdrop, .pop-leave-to .profile-backdrop { background-color: rgb(16 40 80 / 0%); backdrop-filter: blur(0); -webkit-backdrop-filter: blur(0); }
 .profile-popup { transition: transform 320ms cubic-bezier(.2, 0, 0, 1), opacity 260ms ease; }
 .pop-enter-from .profile-popup, .pop-leave-to .profile-popup { transform: scale(.94) translateY(8px); opacity: 0; }
+.profile-btn--signin { width: auto; height: 42px; padding: 0 18px; border-radius: 999px; font-size: 15px; }

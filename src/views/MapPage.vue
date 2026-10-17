@@ -14,7 +14,7 @@ const props = defineProps({
   paths: { type: Array, required: true },
   restrictions: { type: Object, required: true },
   reports: { type: Array, required: true },
-  profileName: { type: String, default: '' },
+  citizenEmail: { type: String, default: '' },
   profileMode: { type: String, default: 'oku' },
   councilAuthenticated: { type: Boolean, default: false },
   demoCouncilSession: { type: Boolean, default: false },
@@ -23,7 +23,7 @@ const props = defineProps({
   canManageReports: { type: Boolean, default: false },
 })
 
-defineEmits(['report', 'resolve', 'save-profile', 'select-profile-mode', 'council-authenticated', 'council-sign-out'])
+defineEmits(['report', 'resolve', 'login', 'citizen-sign-out', 'select-profile-mode', 'council-authenticated', 'council-sign-out'])
 const originId = defineModel('originId', { type: String, required: true })
 const destinationId = defineModel('destinationId', { type: String, required: true })
 const selectedPathId = defineModel('selectedPathId', { type: String, default: '' })
@@ -32,7 +32,6 @@ const selectedPathId = defineModel('selectedPathId', { type: String, default: ''
 // the destination row shows once a start is chosen (or if a destination was swapped into place)
 const showDestination = computed(() => Boolean(originId.value || destinationId.value))
 const profileOpen = ref(false)
-const profileInitial = computed(() => props.profileName.trim().charAt(0).toUpperCase())
 const searchablePlaces = computed(() => props.locations.filter((place) => place.connected))
 const selectedPath = computed(() => pathsById.get(selectedPathId.value) || null)
 const pathReports = computed(() => props.reports.filter((report) => report.pathId === selectedPathId.value && report.status === 'active'))
@@ -77,22 +76,20 @@ async function swap() {
       @set-destination="destinationId = $event"
     />
 
-    <button type="button" class="profile-btn" aria-label="Open your profile" :aria-expanded="profileOpen" @click="profileOpen = !profileOpen">
-      <template v-if="profileInitial">{{ profileInitial }}</template>
-      <User v-else :size="20" /></button>
+    <button v-if="!citizenEmail && !councilAuthenticated && !demoCouncilSession" type="button" class="profile-btn profile-btn--signin" @click="$emit('login')">Sign in</button>
+    <button v-else type="button" class="profile-btn" aria-label="Open your profile" :aria-expanded="profileOpen" @click="profileOpen = !profileOpen">
+      <User :size="20" /></button>
 
     <!-- teleported to <body> so the blurred backdrop also covers the navigation bar -->
     <Teleport to="body">
       <Transition name="pop" :duration="320">
         <ProfilePopup
           v-if="profileOpen"
-          :name="profileName"
+          :citizen-email="citizenEmail"
           :mode="profileMode"
           :council-authenticated="councilAuthenticated"
           :demo-council-session="demoCouncilSession"
-          :active-count="activeCount"
-          :resolved-count="resolvedCount"
-          @save="$emit('save-profile', $event)"
+          @save="$emit('login', 'citizen-sign-out', $event)"
           @select-mode="$emit('select-profile-mode', $event)"
           @council-authenticated="$emit('council-authenticated', $event)"
           @sign-out="$emit('council-sign-out')"

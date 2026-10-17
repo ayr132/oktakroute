@@ -5,12 +5,13 @@ import BottomNav from './components/BottomNav.vue'
 import MapPage from './views/MapPage.vue'
 import ReportPage from './views/ReportPage.vue'
 import UpdatesPage from './views/UpdatesPage.vue'
+import LoginPage from './views/LoginPage.vue'
 import CouncilDashboard from './views/CouncilDashboard.vue'
 import { fetchReports, saveReport, subscribeToReports, supabase, supabaseConfigError } from './data/supabase'
 import { effectiveStatus, loadReports, pathRestrictions, resolveReport, saveReports } from './services/reportService'
 import { locations, paths, planRoute } from './services/routingService'
 
-const VIEWS = ['map', 'report', 'updates', 'council']
+const VIEWS = ['map', 'report', 'updates', 'council', 'login']
 const readHash = () => {
   const view = window.location.hash.replace(/^#\/?/, '')
   return VIEWS.includes(view) ? view : 'map'
@@ -25,9 +26,8 @@ const selectedPathId = ref('')
 const reportPathId = ref('')
 const notice = ref('')
 const syncState = ref('local')
-const PROFILE_KEY = 'oktakroute-profile-name'
 const PROFILE_MODE_KEY = 'oktakroute-profile-mode'
-const profileName = ref(readProfileName())
+const citizenEmail = ref('')
 const profileMode = ref(readProfileMode())
 const councilAuthenticated = ref(false)
 const demoCouncilSession = ref(false)
@@ -48,14 +48,6 @@ const activeCount = computed(() => reportRows.value.filter((report) => report.st
 watch(reports, (value) => {
   if (!saveReports(value)) showNotice('Your report is active for this session but could not be saved in this browser.')
 }, { deep: true })
-
-function readProfileName() {
-  try {
-    return localStorage.getItem(PROFILE_KEY) || ''
-  } catch {
-    return ''
-  }
-}
 
 function readProfileMode() {
   try {
@@ -89,14 +81,9 @@ function onCouncilSignOut() {
   go('map')
 }
 
-function saveProfile(name) {
-  profileName.value = name
-  try {
-    localStorage.setItem(PROFILE_KEY, name)
-  } catch (error) {
-    console.error('Could not save the profile in this browser.', error)
-    showNotice('Profile updated for this session but could not be saved.')
-  }
+async function citizenSignOut() {
+  citizenEmail.value = ''
+  if (supabase) await supabase.auth.signOut()
 }
 
 function go(next, pathId = '') {
@@ -141,6 +128,7 @@ onMounted(async () => {
   }
 
   const auth = supabase.auth.onAuthStateChange((_event, session) => {
+    citizenEmail.value = session?.user?.app_metadata?.role === 'council' ? '' : session?.user?.email || ''
     councilAuthenticated.value = session?.user?.app_metadata?.role === 'council'
     if (authReady.value && !isCouncilMode.value && view.value === 'council') go('map')
   })
@@ -149,6 +137,7 @@ onMounted(async () => {
     const { data, error } = await supabase.auth.getSession()
     if (error) throw error
     councilAuthenticated.value = data.session?.user?.app_metadata?.role === 'council'
+    citizenEmail.value = councilAuthenticated.value ? '' : data.session?.user?.email || ''
   } catch (error) {
     console.error('Could not restore the council authentication session.', error)
     showNotice('Council sign-in could not be verified. Please sign in again.')
@@ -255,7 +244,7 @@ function viewOnMap(pathId) {
       :paths="paths"
       :restrictions="restrictions"
       :reports="reportRows"
-      :profile-name="profileName"
+      :citizen-email="citizenEmail"
       :profile-mode="profileMode"
       :council-authenticated="councilAuthenticated"
       :demo-council-session="demoCouncilSession"
@@ -264,7 +253,8 @@ function viewOnMap(pathId) {
       :resolved-count="resolvedCount"
       @report="go('report', $event)"
       @resolve="resolve"
-      @save-profile="saveProfile"
+      @login="go('login')"
+      @citizen-sign-out="citizenSignOut"
       @select-profile-mode="saveProfileMode"
       @council-authenticated="onCouncilAuthenticated"
       @council-sign-out="onCouncilSignOut"
@@ -279,6 +269,7 @@ function viewOnMap(pathId) {
       @submit="submitReport"
       @cancel="go('map')"
     />
+    <LoginPage v-else-if="view === 'login'" @done="go('map')" @cancel="go('map')" />
     <UpdatesPage
       v-else-if="view === 'updates'"
       :reports="reportRows"
@@ -300,7 +291,7 @@ function viewOnMap(pathId) {
       @report="go('report', $event)"
     />
 
-    <BottomNav :view="view" :active-count="activeCount" @go="go" />
+    <BottomNav v-if="view !== 'login'" :view="view" :active-count="activeCount" @go="go" />
 
     <Transition name="toast">
       <div v-if="notice" class="toast" role="status"><Check :size="16" />{{ notice }}<button type="button" aria-label="Dismiss notification" @click="notice = ''"><X :size="15" /></button></div>

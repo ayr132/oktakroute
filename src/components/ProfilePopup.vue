@@ -1,29 +1,22 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { Accessibility, Building2, Check, User, X } from '@lucide/vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { Building2, User, UserRound, X } from '@lucide/vue'
 import { supabase } from '../data/supabase'
 import { demoCouncilEmail, demoCouncilEnabled, matchesDemoCouncilCredentials } from '../data/demoCouncil'
 
 const props = defineProps({
-  name: { type: String, default: '' },
-  activeCount: { type: Number, default: 0 },
-  resolvedCount: { type: Number, default: 0 },
+  citizenEmail: { type: String, default: '' },
   mode: { type: String, default: 'oku' },
   councilAuthenticated: { type: Boolean, default: false },
   demoCouncilSession: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['save', 'close', 'select-mode', 'council-authenticated', 'sign-out'])
-const draft = ref(props.name)
+const emit = defineEmits(['citizen-sign-out', 'close', 'select-mode', 'council-authenticated', 'sign-out'])
 const selectedMode = ref(props.mode)
-const saved = ref(false)
-const input = ref(null)
 const councilEmail = ref(demoCouncilEmail)
 const councilPassword = ref('')
 const authError = ref('')
 const authBusy = ref(false)
-const initial = computed(() => draft.value.trim().charAt(0).toUpperCase())
-let savedTimer
 
 const onKeydown = (event) => { if (event.key === 'Escape') emit('close') }
 
@@ -31,13 +24,6 @@ function selectMode(mode) {
   selectedMode.value = mode
   authError.value = ''
   emit('select-mode', mode)
-}
-
-function save() {
-  emit('save', draft.value.trim())
-  saved.value = true
-  window.clearTimeout(savedTimer)
-  savedTimer = window.setTimeout(() => { saved.value = false }, 2000)
 }
 
 async function signInCouncil() {
@@ -76,6 +62,16 @@ async function signInCouncil() {
   }
 }
 
+async function signOutCitizen() {
+  try {
+    if (supabase) await supabase.auth.signOut()
+    emit('citizen-sign-out')
+  } catch (error) {
+    console.error('Citizen sign-out failed.', error)
+    authError.value = 'Could not sign out. Please try again.'
+  }
+}
+
 async function signOutCouncil() {
   if (props.demoCouncilSession) {
     emit('sign-out')
@@ -101,11 +97,9 @@ function openCouncilDashboard() {
 
 onMounted(() => {
   window.addEventListener('keydown', onKeydown)
-  input.value?.focus()
 })
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeydown)
-  window.clearTimeout(savedTimer)
 })
 </script>
 
@@ -116,31 +110,25 @@ onBeforeUnmount(() => {
       <button type="button" class="icon-btn profile-close" aria-label="Close profile" @click="emit('close')"><X :size="18" /></button>
 
       <div class="profile-head">
-        <span class="profile-avatar" aria-hidden="true">
-          <template v-if="initial">{{ initial }}</template>
-          <User v-else :size="30" />
-        </span>
-        <strong>{{ name || 'Your profile' }}</strong>
-        <span>Your details stay in this browser.</span>
+        <span class="profile-avatar" aria-hidden="true"><User :size="30" /></span>
+        <strong>{{ citizenEmail || 'Guest' }}</strong>
       </div>
-
-      <form class="profile-form" @submit.prevent="save">
-        <label class="form-label" for="profile-name">Display name</label>
-        <input id="profile-name" ref="input" v-model="draft" class="text-input" type="text" maxlength="40" autocomplete="name" placeholder="e.g. Alex" />
-        <button type="submit" class="btn btn--brand btn--block"><Check v-if="saved" :size="16" />{{ saved ? 'Saved' : 'Save' }}</button>
-      </form>
 
       <section class="profile-roles" aria-label="Choose your role">
         <strong>Continue as</strong>
         <div class="profile-role-options">
           <button type="button" :class="{ selected: selectedMode === 'oku' }" :aria-pressed="selectedMode === 'oku'" @click="selectMode('oku')">
-            <Accessibility :size="17" /> OKU citizen
+            <UserRound :size="17" /> Citizen
           </button>
           <button type="button" :class="{ selected: selectedMode === 'council' }" :aria-pressed="selectedMode === 'council'" @click="selectMode('council')">
             <Building2 :size="17" /> Council staff
           </button>
         </div>
-        <form v-if="selectedMode === 'council' && !councilAuthenticated" class="profile-form council-login" @submit.prevent="signInCouncil">
+        <div v-if="selectedMode === 'oku' && citizenEmail" class="profile-council-actions">
+          <button type="button" class="btn btn--light btn--block" @click="signOutCitizen">Log out</button>
+          <p v-if="authError" class="form-error" role="alert">{{ authError }}</p>
+        </div>
+        <form v-else-if="selectedMode === 'council' && !councilAuthenticated" class="profile-form council-login" @submit.prevent="signInCouncil">
           <p v-if="demoCouncilEnabled" class="demo-auth-notice">Local development demo only. This does not verify access with Supabase.</p>
           <label class="form-label" for="council-email">Council staff email</label>
           <input id="council-email" v-model="councilEmail" class="text-input" type="email" autocomplete="username" required />
@@ -158,10 +146,6 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
-      <div class="profile-stats" aria-label="Community reports">
-        <div><strong>{{ activeCount }}</strong><span>Active reports</span></div>
-        <div><strong>{{ resolvedCount }}</strong><span>Resolved</span></div>
-      </div>
     </section>
   </div>
 </template>
