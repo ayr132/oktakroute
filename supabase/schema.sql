@@ -4,7 +4,7 @@
 create table if not exists public.path_reports (
   id uuid primary key,
   path_id text not null,
-  type text not null check (type in ('maintenance', 'blocked', 'damaged', 'ramp', 'stairs', 'obstruction', 'other')),
+  type text not null check (type in ('maintenance', 'blocked', 'damaged', 'ramp', 'stairs', 'obstruction', 'vehicle', 'other')),
   description text not null default '',
   status text not null default 'active' check (status in ('active', 'resolved', 'expired')),
   reported_at timestamptz not null default now(),
@@ -16,6 +16,11 @@ create table if not exists public.path_reports (
   photos jsonb not null default '[]'::jsonb
 );
 
+alter table public.path_reports drop constraint if exists path_reports_type_check;
+alter table public.path_reports
+  add constraint path_reports_type_check
+  check (type in ('maintenance', 'blocked', 'damaged', 'ramp', 'stairs', 'obstruction', 'vehicle', 'other'));
+
 alter table public.path_reports enable row level security;
 
 drop policy if exists "Anyone can read path reports" on public.path_reports;
@@ -26,10 +31,12 @@ drop policy if exists "Anyone can add path reports" on public.path_reports;
 create policy "Anyone can add path reports"
   on public.path_reports for insert to anon, authenticated with check (true);
 
--- Prototype only: anyone can mark a report resolved. Restrict this once there are user accounts.
 drop policy if exists "Anyone can update path reports" on public.path_reports;
-create policy "Anyone can update path reports"
-  on public.path_reports for update to anon, authenticated using (true) with check (true);
+drop policy if exists "Council staff can update path reports" on public.path_reports;
+create policy "Council staff can update path reports"
+  on public.path_reports for update to authenticated
+  using ((auth.jwt() -> 'app_metadata' ->> 'role') = 'council')
+  with check ((auth.jwt() -> 'app_metadata' ->> 'role') = 'council');
 
 do $$
 begin

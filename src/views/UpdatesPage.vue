@@ -7,6 +7,7 @@ import { formatDate } from '../utils/formatDate'
 
 const props = defineProps({
   reports: { type: Array, required: true },
+  canManageReports: { type: Boolean, default: false },
 })
 
 defineEmits(['resolve', 'view-on-map', 'report'])
@@ -55,7 +56,7 @@ const pathName = (report) => pathsById.get(report.pathId)?.name || report.pathId
           </dl>
           <div class="update-actions">
             <button type="button" class="btn btn--light" @click="$emit('view-on-map', report.pathId)"><MapPin :size="15" /> View on map</button>
-            <button v-if="report.status === 'active'" type="button" class="btn btn--dark" @click="$emit('resolve', report)"><RotateCcw :size="15" /> Mark resolved</button>
+            <button v-if="canManageReports && report.status === 'active'" type="button" class="btn btn--dark" @click="$emit('resolve', report)"><RotateCcw :size="15" /> Mark resolved</button>
           </div>
         </div>
       </li>

@@ -5,11 +5,12 @@ import BottomNav from './components/BottomNav.vue'
 import MapPage from './views/MapPage.vue'
 import ReportPage from './views/ReportPage.vue'
 import UpdatesPage from './views/UpdatesPage.vue'
+import CouncilDashboard from './views/CouncilDashboard.vue'
 import { fetchReports, saveReport, subscribeToReports, supabase, supabaseConfigError } from './data/supabase'
 import { effectiveStatus, loadReports, pathRestrictions, resolveReport, saveReports } from './services/reportService'
 import { locations, paths, planRoute } from './services/routingService'
 
-const VIEWS = ['map', 'report', 'updates']
+const VIEWS = ['map', 'report', 'updates', 'council']
 const readHash = () => {
   const view = window.location.hash.replace(/^#\/?/, '')
   return VIEWS.includes(view) ? view : 'map'
@@ -23,13 +24,21 @@ const destinationId = ref('')
 const selectedPathId = ref('')
 const reportPathId = ref('')
 const notice = ref('')
+const syncState = ref('local')
 const PROFILE_KEY = 'oktakroute-profile-name'
+const PROFILE_MODE_KEY = 'oktakroute-profile-mode'
 const profileName = ref(readProfileName())
+const profileMode = ref(readProfileMode())
+const councilAuthenticated = ref(false)
+const demoCouncilSession = ref(false)
+const authReady = ref(!supabase)
 let realtimeChannel
+let authSubscription
 let clock
 
 const restrictions = computed(() => pathRestrictions(reports.value, now.value))
 const plan = computed(() => planRoute(originId.value, destinationId.value, { restrictions: restrictions.value }))
+const isCouncilMode = computed(() => (councilAuthenticated.value || demoCouncilSession.value) && profileMode.value === 'council')
 const reportRows = computed(() => reports.value
   .map((report) => ({ ...report, status: effectiveStatus(report, now.value) }))
   .sort((a, b) => new Date(b.reportedAt).getTime() - new Date(a.reportedAt).getTime()))
@@ -48,6 +57,38 @@ function readProfileName() {
   }
 }
 
+function readProfileMode() {
+  try {
+    return localStorage.getItem(PROFILE_MODE_KEY) === 'council' ? 'council' : 'oku'
+  } catch {
+    return 'oku'
+  }
+}
+
+function saveProfileMode(mode) {
+  profileMode.value = mode
+  try {
+    localStorage.setItem(PROFILE_MODE_KEY, mode)
+  } catch (error) {
+    console.error('Could not save the profile role in this browser.', error)
+    showNotice('Profile role changed for this session but could not be saved.')
+  }
+}
+
+function onCouncilAuthenticated(authType = 'supabase') {
+  demoCouncilSession.value = authType === 'demo'
+  councilAuthenticated.value = authType !== 'demo'
+  saveProfileMode('council')
+  go('council')
+}
+
+function onCouncilSignOut() {
+  councilAuthenticated.value = false
+  demoCouncilSession.value = false
+  saveProfileMode('oku')
+  go('map')
+}
+
 function saveProfile(name) {
   profileName.value = name
   try {
@@ -59,28 +100,76 @@ function saveProfile(name) {
 }
 
 function go(next, pathId = '') {
+  if (next === 'council' && !isCouncilMode.value) {
+    showNotice('Choose Council staff and sign in from your profile to continue.')
+    return
+  }
   if (next === 'report') reportPathId.value = pathId || selectedPathId.value
   view.value = next
   if (window.location.hash !== `#/${next}`) window.location.hash = `/${next}`
   window.scrollTo({ top: 0 })
 }
 
-const onHashChange = () => { view.value = readHash() }
+const onHashChange = () => {
+  const next = readHash()
+  if (next === 'council' && authReady.value && !isCouncilMode.value) {
+    go('map')
+    showNotice('Council dashboard access requires a verified council account.')
+    return
+  }
+  view.value = next
+}
 
 onMounted(async () => {
   window.addEventListener('hashchange', onHashChange)
   clock = window.setInterval(() => { now.value = Date.now() }, 30000)
   if (supabaseConfigError) {
     showNotice(supabaseConfigError)
+    if (view.value === 'council') {
+      view.value = 'map'
+      window.location.hash = '/map'
+    }
     return
   }
-  if (!supabase) return
+  if (!supabase) {
+    authReady.value = true
+    if (view.value === 'council') {
+      view.value = 'map'
+      window.location.hash = '/map'
+    }
+    return
+  }
 
+  const auth = supabase.auth.onAuthStateChange((_event, session) => {
+    councilAuthenticated.value = session?.user?.app_metadata?.role === 'council'
+    if (authReady.value && !isCouncilMode.value && view.value === 'council') go('map')
+  })
+  authSubscription = auth.data.subscription
+  try {
+    const { data, error } = await supabase.auth.getSession()
+    if (error) throw error
+    councilAuthenticated.value = data.session?.user?.app_metadata?.role === 'council'
+  } catch (error) {
+    console.error('Could not restore the council authentication session.', error)
+    showNotice('Council sign-in could not be verified. Please sign in again.')
+  } finally {
+    authReady.value = true
+  }
+  if (view.value === 'council' && !isCouncilMode.value) {
+    view.value = 'map'
+    window.location.hash = '/map'
+    showNotice('Council dashboard access requires a verified council account.')
+  }
+
+  syncState.value = 'connecting'
   realtimeChannel = subscribeToReports(mergeReport, (status, error) => {
+    if (status === 'SUBSCRIBED') syncState.value = 'live'
     if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+      syncState.value = 'local'
       console.error('OKtakRoute realtime connection failed.', error)
       showNotice('Live sync is unavailable; reports are saved in this browser.')
     }
+    if (status === 'CLOSED') syncState.value = 'local'
   })
 
   try {
@@ -104,6 +193,7 @@ onUnmounted(() => {
   window.removeEventListener('hashchange', onHashChange)
   window.clearInterval(clock)
   if (realtimeChannel && supabase) supabase.removeChannel(realtimeChannel)
+  authSubscription?.unsubscribe()
 })
 
 function showNotice(message) {
@@ -132,10 +222,14 @@ function submitReport(report) {
 }
 
 function resolve(report) {
+  if (!isCouncilMode.value) {
+    showNotice('Only signed-in council staff can mark reports resolved.')
+    return
+  }
   const resolved = resolveReport(reports.value.find((item) => item.id === report.id) || report)
   mergeReport(resolved)
   showNotice('Marked as resolved. Routes can use this path again.')
-  if (supabase && !resolved.id.startsWith('report-seed-')) {
+  if (supabase && !demoCouncilSession.value && !resolved.id.startsWith('report-seed-')) {
     saveReport(resolved).catch((error) => {
       console.error('Could not sync this resolution with Supabase.', error)
       showNotice('Resolved here, but cloud sync failed.')
@@ -162,11 +256,18 @@ function viewOnMap(pathId) {
       :restrictions="restrictions"
       :reports="reportRows"
       :profile-name="profileName"
+      :profile-mode="profileMode"
+      :council-authenticated="councilAuthenticated"
+      :demo-council-session="demoCouncilSession"
+      :can-manage-reports="isCouncilMode"
       :active-count="activeCount"
       :resolved-count="resolvedCount"
       @report="go('report', $event)"
       @resolve="resolve"
       @save-profile="saveProfile"
+      @select-profile-mode="saveProfileMode"
+      @council-authenticated="onCouncilAuthenticated"
+      @council-sign-out="onCouncilSignOut"
     />
     <ReportPage
       v-if="view === 'report'"
@@ -181,9 +282,22 @@ function viewOnMap(pathId) {
     <UpdatesPage
       v-else-if="view === 'updates'"
       :reports="reportRows"
+      :can-manage-reports="isCouncilMode"
       @resolve="resolve"
       @view-on-map="viewOnMap"
       @report="go('report')"
+    />
+    <CouncilDashboard
+      v-else-if="view === 'council' && isCouncilMode"
+      :reports="reportRows"
+      :sync-state="syncState"
+      :demo-mode="demoCouncilSession"
+      :locations="locations"
+      :paths="paths"
+      :restrictions="restrictions"
+      :plan="plan"
+      @resolve="resolve"
+      @report="go('report', $event)"
     />
 
     <BottomNav :view="view" :active-count="activeCount" @go="go" />

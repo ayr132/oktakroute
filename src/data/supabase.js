@@ -46,9 +46,20 @@ function toRow(report) {
 }
 
 export async function fetchReports() {
-  const { data, error } = await supabase.from('path_reports').select(COLUMNS).order('reported_at', { ascending: false }).limit(200)
-  if (error) throw error
-  return data.map(fromRow)
+  const pageSize = 1000
+  const rows = []
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await supabase
+      .from('path_reports')
+      .select(COLUMNS)
+      .order('reported_at', { ascending: false })
+      .order('id', { ascending: false })
+      .range(offset, offset + pageSize - 1)
+    if (error) throw error
+    rows.push(...data)
+    if (data.length < pageSize) break
+  }
+  return rows.map(fromRow)
 }
 
 export async function saveReport(report) {

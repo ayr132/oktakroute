@@ -15,11 +15,15 @@ const props = defineProps({
   restrictions: { type: Object, required: true },
   reports: { type: Array, required: true },
   profileName: { type: String, default: '' },
+  profileMode: { type: String, default: 'oku' },
+  councilAuthenticated: { type: Boolean, default: false },
+  demoCouncilSession: { type: Boolean, default: false },
   activeCount: { type: Number, default: 0 },
   resolvedCount: { type: Number, default: 0 },
+  canManageReports: { type: Boolean, default: false },
 })
 
-defineEmits(['report', 'resolve', 'save-profile'])
+defineEmits(['report', 'resolve', 'save-profile', 'select-profile-mode', 'council-authenticated', 'council-sign-out'])
 const originId = defineModel('originId', { type: String, required: true })
 const destinationId = defineModel('destinationId', { type: String, required: true })
 const selectedPathId = defineModel('selectedPathId', { type: String, default: '' })
@@ -83,9 +87,15 @@ async function swap() {
         <ProfilePopup
           v-if="profileOpen"
           :name="profileName"
+          :mode="profileMode"
+          :council-authenticated="councilAuthenticated"
+          :demo-council-session="demoCouncilSession"
           :active-count="activeCount"
           :resolved-count="resolvedCount"
           @save="$emit('save-profile', $event)"
+          @select-mode="$emit('select-profile-mode', $event)"
+          @council-authenticated="$emit('council-authenticated', $event)"
+          @sign-out="$emit('council-sign-out')"
           @close="profileOpen = false"
         />
       </Transition>
@@ -117,6 +127,7 @@ async function swap() {
       v-if="selectedPath"
       :path="selectedPath"
       :reports="pathReports"
+      :can-manage-reports="canManageReports"
       @close="selectedPathId = ''"
       @report="$emit('report', $event)"
       @resolve="$emit('resolve', $event)"

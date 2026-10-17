@@ -6,6 +6,7 @@ import { EFFECT_LABELS, REPORT_TYPES } from '../data/reportTypes'
 const props = defineProps({
   path: { type: Object, required: true },
   reports: { type: Array, required: true },
+  canManageReports: { type: Boolean, default: false },
 })
 
 defineEmits(['close', 'report', 'resolve'])
@@ -35,7 +36,7 @@ const state = computed(() => {
           <strong>{{ REPORT_TYPES[report.type]?.label }}</strong>
           <small>{{ EFFECT_LABELS[REPORT_TYPES[report.type]?.effect] }}<template v-if="report.description"> · {{ report.description }}</template></small>
         </span>
-        <button type="button" class="btn-small" @click="$emit('resolve', report)"><RotateCcw :size="13" /> Resolved</button>
+        <button v-if="canManageReports" type="button" class="btn-small" @click="$emit('resolve', report)"><RotateCcw :size="13" /> Resolved</button>
       </li>
     </ul>
     <p v-else class="sheet-note"><CheckCircle2 :size="15" /> No active reports on this path.</p>

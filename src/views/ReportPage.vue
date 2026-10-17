@@ -23,9 +23,15 @@ const photo = ref(null)
 const fileInput = ref(null)
 const error = ref('')
 const isPreparing = ref(false)
+const selectionAnimation = ref(0)
 
 const needsDescription = computed(() => type.value === 'other')
 const canSubmit = computed(() => Boolean(pathId.value && type.value) && (!needsDescription.value || description.value.trim().length > 0))
+
+function chooseType(key) {
+  type.value = key
+  selectionAnimation.value += 1
+}
 
 function choosePhoto(event) {
   const file = event.target.files?.[0]
@@ -83,7 +89,7 @@ async function submit() {
     <form class="form" @submit.prevent="submit">
       <section class="form-step">
         <span class="form-label">Which road has the problem?</span>
-        <div class="report-picker">
+        <div class="report-picker shadow-md">
           <MapView
             pick-mode
             :locations="locations"
@@ -95,10 +101,10 @@ async function submit() {
           />
         </div>
         <div class="report-context-row">
-          <p class="picked-chip" :class="{ 'picked-chip--empty': !chosenPath }">
+          <p class="picked-chip shadow-sm" :class="{ 'picked-chip--empty': !chosenPath }">
             {{ chosenPath ? `${chosenPath.name} (${chosenPath.id})` : 'Tap a road on the map to select it' }}
           </p>
-          <aside class="authority-card" aria-label="Local authority for this area">
+          <aside v-if="chosenPath" class="authority-card shadow-md" aria-label="Local authority for this area">
             <div class="authority-copy">
               <span>Local authority</span>
               <a href="https://jkt.kpkt.gov.my/en/list-of-local-authorities/" target="_blank" rel="noopener noreferrer">
@@ -119,7 +125,14 @@ async function submit() {
       <fieldset class="form-step">
         <legend class="form-label">What's the problem?</legend>
         <div class="type-grid">
-          <button v-for="(info, key) in REPORT_TYPES" :key="key" type="button" :class="{ selected: type === key }" :aria-pressed="type === key" @click="type = key">
+          <button
+            v-for="(info, key) in REPORT_TYPES"
+            :key="type === key ? `${key}-${selectionAnimation}` : key"
+            type="button"
+            :class="{ selected: type === key, 'shadow-sm': type !== key, 'shadow-lg': type === key }"
+            :aria-pressed="type === key"
+            @click="chooseType(key)"
+          >
             <span class="type-icon" aria-hidden="true">{{ info.icon }}</span>
             <strong>{{ info.label }}</strong>
             <small>{{ EFFECT_LABELS[info.effect] }}</small>
@@ -129,20 +142,20 @@ async function submit() {
 
       <section class="form-step">
         <label class="form-label" for="report-description">Details <span v-if="!needsDescription">(optional)</span></label>
-        <textarea id="report-description" v-model="description" rows="3" maxlength="280" placeholder="e.g. Ramp rail is loose near the entrance." :required="needsDescription"></textarea>
+        <textarea id="report-description" class="shadow-sm" v-model="description" rows="3" maxlength="280" placeholder="e.g. Ramp rail is loose near the entrance." :required="needsDescription"></textarea>
       </section>
 
       <section class="form-step form-split">
         <div>
           <label class="form-label" for="report-duration">How long will it last?</label>
-          <select id="report-duration" v-model="durationHours">
+          <select id="report-duration" class="shadow-sm" v-model="durationHours">
             <option v-for="option in DURATION_OPTIONS" :key="option.label" :value="option.hours">{{ option.label }}</option>
           </select>
         </div>
         <div>
           <span class="form-label">Photo (optional)</span>
           <input ref="fileInput" class="sr-only" type="file" accept="image/*" @change="choosePhoto" />
-          <button type="button" class="btn btn--light btn--block" @click="fileInput?.click()">
+          <button type="button" class="btn btn--light btn--block shadow-sm" @click="fileInput?.click()">
             <Check v-if="photo" :size="16" /><ImagePlus v-else :size="16" />
             <span class="truncate">{{ photo ? photo.name : 'Add a photo' }}</span>
           </button>
@@ -151,18 +164,18 @@ async function submit() {
 
       <p v-if="error" class="form-error" role="alert">{{ error }}</p>
 
-      <section v-if="type === 'vehicle'" class="form-step vehicle-report-section" aria-labelledby="vehicle-report-title">
+      <section v-if="type === 'vehicle'" class="form-step vehicle-report-section shadow-md" aria-labelledby="vehicle-report-title">
         <h2 id="vehicle-report-title" class="form-label">Report to an authority</h2>
         <p>Choose an official complaint portal. Your OKtakRoute report is not sent to either agency automatically.</p>
         <div class="agency-options">
-          <a href="https://jpj.spab.gov.my/eApps/sdmscasepool/SdmsCasePool/add.do" target="_blank" rel="noopener noreferrer">Report to JPJ</a>
-          <a href="https://rmp.spab.gov.my/eApps/sdmscasepool/SdmsCasePool/add.do" target="_blank" rel="noopener noreferrer">Report to PDRM</a>
+          <a class="shadow-sm" href="https://jpj.spab.gov.my/eApps/sdmscasepool/SdmsCasePool/add.do" target="_blank" rel="noopener noreferrer">Report to JPJ</a>
+          <a class="shadow-sm" href="https://rmp.spab.gov.my/eApps/sdmscasepool/SdmsCasePool/add.do" target="_blank" rel="noopener noreferrer">Report to PDRM</a>
         </div>
       </section>
 
       <div class="form-actions">
-        <button type="button" class="btn btn--light" @click="emit('cancel')">Cancel</button>
-        <button type="submit" class="btn btn--brand" :disabled="isPreparing">
+        <button type="button" class="btn btn--light shadow-sm" @click="emit('cancel')">Cancel</button>
+        <button type="submit" class="btn btn--brand shadow-md" :disabled="isPreparing">
           <LoaderCircle v-if="isPreparing" class="spinning" :size="16" />
           <template v-else>Submit report</template>
         </button>
