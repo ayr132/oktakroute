@@ -1,9 +1,11 @@
 <script setup>
+import { useI18n } from 'vue-i18n'
 import { computed, nextTick, ref, watch } from 'vue'
 import { ArrowUpDown, Accessibility, User } from '@lucide/vue'
 import MapView from '../components/MapView.vue'
 import PathSheet from '../components/PathSheet.vue'
 import ProfilePopup from '../components/ProfilePopup.vue'
+import LanguageSwitcher from '../components/LanguageSwitcher.vue'
 import PlaceField from '../components/PlaceField.vue'
 import RouteSheet from '../components/RouteSheet.vue'
 import { pathsById } from '../services/routingService'
@@ -23,6 +25,7 @@ const props = defineProps({
   canManageReports: { type: Boolean, default: false },
 })
 
+const { t } = useI18n()
 defineEmits(['report', 'resolve', 'login', 'citizen-sign-out', 'select-profile-mode', 'council-authenticated', 'council-sign-out'])
 const originId = defineModel('originId', { type: String, required: true })
 const destinationId = defineModel('destinationId', { type: String, required: true })
@@ -76,9 +79,12 @@ async function swap() {
       @set-destination="destinationId = $event"
     />
 
-    <button v-if="!citizenEmail && !councilAuthenticated && !demoCouncilSession" type="button" class="profile-btn profile-btn--signin" @click="$emit('login')">Sign in</button>
-    <button v-else type="button" class="profile-btn" aria-label="Open your profile" :aria-expanded="profileOpen" @click="profileOpen = !profileOpen">
-      <User :size="20" /></button>
+    <div class="top-actions">
+      <button v-if="!citizenEmail && !councilAuthenticated && !demoCouncilSession" type="button" class="profile-btn profile-btn--signin" @click="$emit('login')">{{ t('map.signIn') }}</button>
+      <button v-else type="button" class="profile-btn" :aria-label="t('map.openProfile')" :aria-expanded="profileOpen" @click="profileOpen = !profileOpen">
+        <User :size="20" /></button>
+      <LanguageSwitcher />
+    </div>
 
     <!-- teleported to <body> so the blurred backdrop also covers the navigation bar -->
     <Teleport to="body">
@@ -89,7 +95,7 @@ async function swap() {
           :mode="profileMode"
           :council-authenticated="councilAuthenticated"
           :demo-council-session="demoCouncilSession"
-          @save="$emit('login', 'citizen-sign-out', $event)"
+          @citizen-sign-out="$emit('citizen-sign-out')"
           @select-mode="$emit('select-profile-mode', $event)"
           @council-authenticated="$emit('council-authenticated', $event)"
           @sign-out="$emit('council-sign-out')"
@@ -106,18 +112,18 @@ async function swap() {
       <div class="search-rows">
         <div class="search-row">
           <span class="dot dot--origin" aria-hidden="true"></span>
-          <PlaceField v-model="originId" :options="searchablePlaces" label="Where are you starting from?" input-id="origin" />
+          <PlaceField v-model="originId" :options="searchablePlaces" :label="t('map.start')" input-id="origin" />
         </div>
         <div class="dest-collapse" :class="{ open: showDestination }" :inert="!showDestination || undefined">
           <div class="dest-inner" :class="{ settled: destSettled }">
             <div class="search-row">
               <span class="dot dot--destination" aria-hidden="true"></span>
-              <PlaceField v-model="destinationId" :options="searchablePlaces" label="Where to?" input-id="destination" />
+              <PlaceField v-model="destinationId" :options="searchablePlaces" :label="t('map.destination')" input-id="destination" />
             </div>
           </div>
         </div>
       </div>
-      <button type="button" class="icon-btn swap-btn" :class="{ shown: showDestination }" :inert="!showDestination || undefined" aria-label="Swap start and destination" @click="swap"><ArrowUpDown :size="18" /></button>
+      <button type="button" class="icon-btn swap-btn" :class="{ shown: showDestination }" :inert="!showDestination || undefined" :aria-label="t('map.swap')" @click="swap"><ArrowUpDown :size="18" /></button>
     </div>
 
     <PathSheet

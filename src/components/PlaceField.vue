@@ -1,4 +1,5 @@
 <script setup>
+import { useI18n } from 'vue-i18n'
 import { computed, ref } from 'vue'
 import { X } from '@lucide/vue'
 import { LOCATION_TYPES } from '../data/campusLocations'
@@ -10,6 +11,7 @@ const props = defineProps({
   inputId: { type: String, required: true },
 })
 
+const { t } = useI18n()
 const model = defineModel({ type: String, required: true })
 const root = ref(null)
 const open = ref(false)
@@ -79,7 +81,7 @@ function onFocusOut(event) {
       @keydown.esc="close(); $event.target.blur()"
       @keydown.enter.prevent="filtered[0] && pick(filtered[0])"
     />
-    <button v-if="model || query" type="button" class="place-clear" :aria-label="`Clear ${label}`" @mousedown.prevent @click="clear">
+    <button v-if="model || query" type="button" class="place-clear" :aria-label="t('map.clear', { label })" @mousedown.prevent @click="clear">
       <X :size="16" />
     </button>
     <Transition name="drop">
@@ -88,10 +90,10 @@ function onFocusOut(event) {
           <button type="button" @mousedown.prevent @click="pick(place)">
             <span class="place-icon" aria-hidden="true">{{ LOCATION_TYPES[place.type]?.icon }}</span>
             <span class="place-name">{{ place.name }}</span>
-            <small v-if="!place.connected">Not mapped yet</small>
+            <small v-if="!place.connected">{{ t('map.notMapped') }}</small>
           </button>
         </li>
-        <li v-if="!filtered.length" class="place-empty">No matching places</li>
+        <li v-if="!filtered.length" class="place-empty">{{ t('map.noPlaces') }}</li>
       </ul>
     </Transition>
   </div>

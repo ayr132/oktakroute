@@ -1,4 +1,5 @@
 <script setup>
+import { useI18n } from 'vue-i18n'
 import { Bell, Flag, Map as MapIcon } from '@lucide/vue'
 
 defineProps({
@@ -7,6 +8,7 @@ defineProps({
 })
 
 defineEmits(['go'])
+const { t } = useI18n()
 
 const items = [
   { id: 'report', label: 'Report', icon: Flag },
@@ -16,7 +18,7 @@ const items = [
 </script>
 
 <template>
-  <nav class="bottom-nav" aria-label="Main navigation">
+  <nav class="bottom-nav" :aria-label="t('nav.label')">
     <button
       v-for="item in items"
       :key="item.id"
@@ -29,7 +31,7 @@ const items = [
         <component :is="item.icon" :size="22" />
         <span v-if="item.id === 'updates' && activeCount" class="nav-badge">{{ activeCount }}</span>
       </span>
-      <span class="nav-label">{{ item.label }}</span>
+      <span class="nav-label">{{ t(`nav.${item.id}`) }}</span>
     </button>
   </nav>
 </template>

@@ -1,5 +1,9 @@
 <script setup>
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { RotateCcw } from '@lucide/vue'
+import LogoutConfirm from '../components/LogoutConfirm.vue'
+import LanguageSwitcher from '../components/LanguageSwitcher.vue'
 import MapView from '../components/MapView.vue'
 import PathSheet from '../components/PathSheet.vue'
 import { REPORT_STATUS, REPORT_TYPES } from '../data/reportTypes'
@@ -16,7 +20,9 @@ const props = defineProps({
   plan: { type: Object, required: true },
 })
 
-const emit = defineEmits(['resolve', 'report'])
+const emit = defineEmits(['resolve', 'report', 'sign-out'])
+const { t } = useI18n()
+const confirmingLogout = ref(false)
 const statusFilter = ref('all')
 const search = ref('')
 const selectedPathId = ref('')
@@ -30,7 +36,7 @@ const visibleReports = computed(() => {
     if (!matchesStatus) return false
     if (!query) return true
     const pathName = pathsById.get(report.pathId)?.name || report.pathId
-    const typeName = REPORT_TYPES[report.type]?.label || report.type
+    const typeName = REPORT_TYPES[report.type] ? `${REPORT_TYPES[report.type].label} ${t(`types.${report.type}`)}` : report.type
     return `${pathName} ${typeName} ${report.description || ''}`.toLocaleLowerCase().includes(query)
   })
 })
@@ -88,36 +94,37 @@ function exportCsv() {
 
 <template>
   <main class="page council-dashboard">
+    <div class="council-lang"><LanguageSwitcher /></div>
     <header class="page-head">
       <p class="dashboard-eyebrow">Majlis Perbandaran Selayang</p>
-      <h1>Council Dashboard</h1>
-      <p>Live community reports to help prioritize path repairs.</p>
-      <p v-if="demoMode" class="demo-auth-notice">Local demo session: report changes are saved only in this browser and are not authorized in Supabase.</p>
+      <h1>{{ t('council.title') }}</h1>
+      <p>{{ t('council.subtitle') }}</p>
+      <p v-if="demoMode" class="demo-auth-notice">{{ t('council.demoNotice') }}</p>
     </header>
 
-    <section class="dashboard-summary" aria-label="Report summary">
+    <section class="dashboard-summary" :aria-label="t('council.summary')">
       <article class="dashboard-stat">
-        <span>Active reports</span>
+        <span>{{ t('council.activeReports') }}</span>
         <strong>{{ activeCount }}</strong>
       </article>
       <article class="dashboard-stat">
-        <span>Resolved reports</span>
+        <span>{{ t('council.resolvedReports') }}</span>
         <strong>{{ resolvedCount }}</strong>
       </article>
       <article class="dashboard-stat">
-        <span>Total reports</span>
+        <span>{{ t('council.totalReports') }}</span>
         <strong>{{ reports.length }}</strong>
       </article>
     </section>
 
     <p class="dashboard-sync" :class="`dashboard-sync--${syncState}`" role="status">
       <span aria-hidden="true"></span>
-      <template v-if="syncState === 'live'">Live updates connected</template>
-      <template v-else-if="syncState === 'connecting'">Connecting to live updates…</template>
-      <template v-else>Live sync unavailable; showing reports saved in this browser.</template>
+      <template v-if="syncState === 'live'">{{ t('council.syncLive') }}</template>
+      <template v-else-if="syncState === 'connecting'">{{ t('council.syncConnecting') }}</template>
+      <template v-else>{{ t('council.syncLocal') }}</template>
     </p>
 
-    <section class="council-map-section" aria-label="Campus paths and report actions">
+    <section class="council-map-section" :aria-label="t('council.mapSection')">
       <div class="council-map">
         <MapView
           pick-mode
@@ -138,63 +145,70 @@ function exportCsv() {
         @report="emit('report', $event)"
         @resolve="emit('resolve', $event)"
       />
-      <p v-else class="council-map-hint">Select a path on the map to review active issues, mark reports resolved, or report a new issue.</p>
+      <p v-else class="council-map-hint">{{ t('council.mapHint') }}</p>
     </section>
 
     <section class="dashboard-panel">
       <div class="dashboard-toolbar">
         <label class="dashboard-search">
-          <span class="sr-only">Search reports</span>
-          <input v-model="search" type="search" placeholder="Search path, issue, or details" />
+          <span class="sr-only">{{ t('council.searchLabel') }}</span>
+          <input v-model="search" type="search" :placeholder="t('council.searchPlaceholder')" />
         </label>
         <label class="dashboard-filter">
-          <span class="sr-only">Filter reports by status</span>
+          <span class="sr-only">{{ t('council.filterLabel') }}</span>
           <select v-model="statusFilter">
-            <option value="all">All statuses</option>
-            <option value="active">Active</option>
-            <option value="resolved">Resolved</option>
-            <option value="expired">Expired</option>
+            <option value="all">{{ t('council.allStatuses') }}</option>
+            <option value="active">{{ t('status.active') }}</option>
+            <option value="resolved">{{ t('status.resolved') }}</option>
+            <option value="expired">{{ t('status.expired') }}</option>
           </select>
         </label>
         <div class="dashboard-export">
-          <button type="button" class="btn btn--light" @click="exportCsv">Export CSV</button>
-          <button type="button" class="btn btn--light" @click="exportJson">Export JSON</button>
+          <button type="button" class="btn btn--light" @click="exportCsv">{{ t('council.exportCsv') }}</button>
+          <button type="button" class="btn btn--light" @click="exportJson">{{ t('council.exportJson') }}</button>
         </div>
       </div>
 
-      <p class="dashboard-result-count">{{ visibleReports.length }} report{{ visibleReports.length === 1 ? '' : 's' }}</p>
+      <p class="dashboard-result-count">{{ t(visibleReports.length === 1 ? 'council.reportOne' : 'council.reportMany', { n: visibleReports.length }) }}</p>
       <div v-if="visibleReports.length" class="dashboard-table-wrap">
         <table class="dashboard-table">
           <thead>
             <tr>
-              <th scope="col">Issue</th>
-              <th scope="col">Path</th>
-              <th scope="col">Details</th>
-              <th scope="col">Reported</th>
-              <th scope="col">Status</th>
+              <th scope="col">{{ t('council.colIssue') }}</th>
+              <th scope="col">{{ t('council.colPath') }}</th>
+              <th scope="col">{{ t('council.colDetails') }}</th>
+              <th scope="col">{{ t('council.colReported') }}</th>
+              <th scope="col">{{ t('council.colStatus') }}</th>
+              <th scope="col">{{ t('council.colAction') }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="report in visibleReports" :key="report.id">
-              <td data-label="Issue">
+              <td :data-label="t('council.colIssue')">
                 <span class="dashboard-issue">
                   <span aria-hidden="true">{{ REPORT_TYPES[report.type]?.icon || '⚠️' }}</span>
-                  {{ REPORT_TYPES[report.type]?.label || report.type }}
+                  {{ REPORT_TYPES[report.type] ? t(`types.${report.type}`) : report.type }}
                 </span>
               </td>
-              <td data-label="Path">{{ reportPath(report) }}</td>
-              <td data-label="Details" class="dashboard-details">{{ report.description || 'No details provided' }}</td>
-              <td data-label="Reported">{{ formatDate(report.reportedAt) }}</td>
-              <td data-label="Status">
-                <span class="status-badge" :class="REPORT_STATUS[report.status]?.classes">{{ REPORT_STATUS[report.status]?.label || report.status }}</span>
+              <td :data-label="t('council.colPath')">{{ reportPath(report) }}</td>
+              <td :data-label="t('council.colDetails')" class="dashboard-details">{{ report.description || t('council.noDetails') }}</td>
+              <td :data-label="t('council.colReported')">{{ formatDate(report.reportedAt) }}</td>
+              <td :data-label="t('council.colStatus')">
+                <span class="status-badge" :class="REPORT_STATUS[report.status]?.classes">{{ REPORT_STATUS[report.status] ? t(`status.${report.status}`) : report.status }}</span>
+              </td>
+              <td :data-label="t('council.colAction')">
+                <button v-if="report.status === 'active'" type="button" class="btn-small" @click="emit('resolve', report)"><RotateCcw :size="13" /> {{ t('updates.markResolved') }}</button>
+                <span v-else class="muted">—</span>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
-      <div v-else class="dashboard-empty">No reports match these filters.</div>
+      <div v-else class="dashboard-empty">{{ t('council.noMatch') }}</div>
     </section>
 
-    <p class="dashboard-disclaimer">Exports contain the reports currently shown after filtering. Council actions require a signed-in account provisioned with the council role.</p>
+    <p class="dashboard-disclaimer">{{ t('council.disclaimer') }}</p>
+    <button type="button" class="btn btn--danger btn--block council-logout" @click="confirmingLogout = true">{{ t('profile.logOut') }}</button>
+    <LogoutConfirm v-if="confirmingLogout" @confirm="emit('sign-out')" @cancel="confirmingLogout = false" />
   </main>
 </template>

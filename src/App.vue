@@ -5,6 +5,7 @@ import BottomNav from './components/BottomNav.vue'
 import MapPage from './views/MapPage.vue'
 import ReportPage from './views/ReportPage.vue'
 import UpdatesPage from './views/UpdatesPage.vue'
+import WelcomePopup from './components/WelcomePopup.vue'
 import LoginPage from './views/LoginPage.vue'
 import CouncilDashboard from './views/CouncilDashboard.vue'
 import { fetchReports, saveReport, subscribeToReports, supabase, supabaseConfigError } from './data/supabase'
@@ -27,7 +28,10 @@ const reportPathId = ref('')
 const notice = ref('')
 const syncState = ref('local')
 const PROFILE_MODE_KEY = 'oktakroute-profile-mode'
+const WELCOME_KEY = 'oktakroute-welcome-seen'
+const showWelcome = ref(!welcomeSeen())
 const citizenEmail = ref('')
+let demoCitizen = false
 const profileMode = ref(readProfileMode())
 const councilAuthenticated = ref(false)
 const demoCouncilSession = ref(false)
@@ -74,6 +78,14 @@ function onCouncilAuthenticated(authType = 'supabase') {
   go('council')
 }
 
+function councilLogout() {
+  const wasDemo = demoCouncilSession.value
+  onCouncilSignOut()
+  if (supabase && !wasDemo) {
+    supabase.auth.signOut().catch((error) => console.error('Council sign-out failed.', error))
+  }
+}
+
 function onCouncilSignOut() {
   councilAuthenticated.value = false
   demoCouncilSession.value = false
@@ -81,9 +93,33 @@ function onCouncilSignOut() {
   go('map')
 }
 
-async function citizenSignOut() {
+function welcomeSeen() {
+  try {
+    return sessionStorage.getItem(WELCOME_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function closeWelcome() {
+  showWelcome.value = false
+  try {
+    sessionStorage.setItem(WELCOME_KEY, '1')
+  } catch {
+    // the popup simply shows again next visit
+  }
+}
+
+function onDemoCitizen(email) {
+  demoCitizen = true
+  citizenEmail.value = email
+  go('map')
+}
+
+function citizenSignOut() {
+  demoCitizen = false
   citizenEmail.value = ''
-  if (supabase) await supabase.auth.signOut()
+  if (supabase) supabase.auth.signOut().catch((error) => console.error('Citizen sign-out failed.', error))
 }
 
 function go(next, pathId = '') {
@@ -128,6 +164,7 @@ onMounted(async () => {
   }
 
   const auth = supabase.auth.onAuthStateChange((_event, session) => {
+    if (demoCitizen) return
     citizenEmail.value = session?.user?.app_metadata?.role === 'council' ? '' : session?.user?.email || ''
     councilAuthenticated.value = session?.user?.app_metadata?.role === 'council'
     if (authReady.value && !isCouncilMode.value && view.value === 'council') go('map')
@@ -257,7 +294,7 @@ function viewOnMap(pathId) {
       @citizen-sign-out="citizenSignOut"
       @select-profile-mode="saveProfileMode"
       @council-authenticated="onCouncilAuthenticated"
-      @council-sign-out="onCouncilSignOut"
+      @council-sign-out="councilLogout"
     />
     <ReportPage
       v-if="view === 'report'"
@@ -269,7 +306,7 @@ function viewOnMap(pathId) {
       @submit="submitReport"
       @cancel="go('map')"
     />
-    <LoginPage v-else-if="view === 'login'" @done="go('map')" @cancel="go('map')" />
+    <LoginPage v-else-if="view === 'login'" @done="go('map')" @council="onCouncilAuthenticated" @demo-citizen="onDemoCitizen" @cancel="go('map')" />
     <UpdatesPage
       v-else-if="view === 'updates'"
       :reports="reportRows"
@@ -289,12 +326,15 @@ function viewOnMap(pathId) {
       :plan="plan"
       @resolve="resolve"
       @report="go('report', $event)"
+      @sign-out="councilLogout"
     />
 
-    <BottomNav v-if="view !== 'login'" :view="view" :active-count="activeCount" @go="go" />
+    <BottomNav v-if="view !== 'login' && view !== 'council'" :view="view" :active-count="activeCount" @go="go" />
+
+    <WelcomePopup v-if="showWelcome" @close="closeWelcome" />
 
     <Transition name="toast">
-      <div v-if="notice" class="toast" role="status"><Check :size="16" />{{ notice }}<button type="button" aria-label="Dismiss notification" @click="notice = ''"><X :size="15" /></button></div>
+      <div v-if="notice" class="app-toast" role="status"><Check :size="16" />{{ notice }}<button type="button" aria-label="Dismiss notification" @click="notice = ''"><X :size="15" /></button></div>
     </Transition>
   </div>
 </template>

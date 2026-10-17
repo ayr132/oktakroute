@@ -1,7 +1,10 @@
 <script setup>
+import { useI18n } from 'vue-i18n'
 import { computed, ref } from 'vue'
 import { CircleAlert, GitBranch, ShieldCheck } from '@lucide/vue'
 import { REPORT_TYPES } from '../data/reportTypes'
+
+const { t } = useI18n()
 
 const props = defineProps({
   plan: { type: Object, required: true },
@@ -14,19 +17,19 @@ const reasonDetails = computed(() => {
   if (props.plan.status === 'blocked') {
     return props.plan.blockedPaths.map(({ path, reports }) => {
       const reasons = reports.map((report) => {
-        const label = REPORT_TYPES[report.type]?.label || 'Active report'
+        const label = REPORT_TYPES[report.type] ? t(`types.${report.type}`) : t('route.activeReport')
         return report.description ? `${label}: ${report.description}` : label
       })
-      return `${path.name}: ${reasons.join('; ') || path.unavailableReason || 'Unavailable'}`
+      return `${path.name}: ${reasons.join('; ') || path.unavailableReason || t('route.unavailable')}`
     })
   }
   if (props.plan.status === 'not-step-free') {
     return props.plan.stairsPaths.map((path) => {
       const reason = path.hasStairs
-        ? 'Has stairs'
+        ? t('route.hasStairs')
         : !path.wheelchairFriendly
-          ? 'Not wheelchair friendly'
-          : `Slope is too steep (${path.slope}%)`
+          ? t('route.notWheelchair')
+          : t('route.tooSteep', { n: path.slope })
       return `${path.name}: ${reason}`
     })
   }
@@ -35,34 +38,31 @@ const reasonDetails = computed(() => {
 
 const message = computed(() => {
   const { status, unmapped, blockedPaths } = props.plan
-  if (status === 'same') return { title: 'You are already here', body: 'Pick a different destination.' }
+  if (status === 'same') return { title: t('route.sameTitle'), body: t('route.sameBody') }
   if (status === 'unmapped') {
     return {
-      title: 'Not on the walking network yet',
-      body: `${unmapped.map((place) => place.name).join(' and ')} ${unmapped.length > 1 ? 'are' : 'is'} too far from any mapped footpath to plan a route.`,
+      title: t('route.unmappedTitle'),
+      body: t(unmapped.length > 1 ? 'route.unmappedMany' : 'route.unmappedOne', { names: unmapped.map((place) => place.name).join(t('route.and')) }),
     }
   }
   if (status === 'not-step-free') {
     const names = [...new Set(props.plan.stairsPaths.map((path) => path.name))].join(', ')
-    return {
-      title: 'Not wheelchair accessible',
-      body: `The only way to ${props.plan.destination.name} is via ${names}, which has stairs. There is no step-free route.`,
-    }
+    return { title: t('route.notStepFreeTitle'), body: t('route.notStepFreeBody', { dest: props.plan.destination.name, names }) }
   }
   if (status === 'blocked') {
     const names = [...new Set(blockedPaths.map(({ path }) => path.name))].join(', ')
-    return { title: 'Route blocked', body: `An active report on ${names} blocks every way there. Check back once it is resolved.` }
+    return { title: t('route.blockedTitle'), body: t('route.blockedBody', { names }) }
   }
-  return { title: 'No route found', body: `No step-free path connects these places.` }
+  return { title: t('route.noneTitle'), body: t('route.noneBody') }
 })
 
 const details = computed(() => {
   if (!route.value) return []
   const r = route.value
   return [
-    r.stepFree ? (r.hasRamp ? 'Step-free · ramps' : 'Step-free') : 'Has stairs',
-    r.maxSlope ? `Up to ${r.maxSlope}% slope` : 'Level ground',
-    r.surfaces.length ? r.surfaces.join(', ') : 'Paved footpath',
+    r.stepFree ? (r.hasRamp ? t('route.stepFreeRamps') : t('route.stepFree')) : t('route.hasStairs'),
+    r.maxSlope ? t('route.upTo', { n: r.maxSlope }) : t('route.level'),
+    r.surfaces.length ? r.surfaces.join(', ') : t('route.paved'),
   ]
 })
 </script>
@@ -71,11 +71,11 @@ const details = computed(() => {
   <section class="sheet" aria-live="polite">
     <template v-if="route">
       <div class="eta">
-        <strong>{{ route.minutes }} min</strong>
-        <span>{{ Math.round(route.distance / 10) * 10 || 10 }} m · step-free pace</span>
-        <span class="eta-badge"><ShieldCheck :size="14" /> Open</span>
+        <strong>{{ t('route.min', { n: route.minutes }) }}</strong>
+        <span>{{ t('route.stepFreePace', { m: Math.round(route.distance / 10) * 10 || 10 }) }}</span>
+        <span class="eta-badge"><ShieldCheck :size="14" /> {{ t('route.open') }}</span>
       </div>
-      <p v-if="plan.detour" class="sheet-note sheet-note--detour"><GitBranch :size="15" /> Rerouted around an active report</p>
+      <p v-if="plan.detour" class="sheet-note sheet-note--detour"><GitBranch :size="15" /> {{ t('route.rerouted') }}</p>
       <ul class="chip-row">
         <li v-for="detail in details" :key="detail">{{ detail }}</li>
       </ul>
@@ -92,7 +92,7 @@ const details = computed(() => {
             href="#route-reasons"
             :aria-expanded="showReasons"
             @click.prevent="showReasons = !showReasons"
-          >see why</a>
+          >{{ t('route.seeWhy') }}</a>
           <ul v-if="showReasons" id="route-reasons" class="route-reasons">
             <li v-for="reason in reasonDetails" :key="reason">{{ reason }}</li>
           </ul>
